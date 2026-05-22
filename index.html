@@ -745,6 +745,15 @@ function renderHifdh() {
       <textarea onchange="updateHifdh('feedback',this.value)" placeholder="What did the teacher say? Any corrections, praise, or areas to improve...">${esc(log.feedback||'')}</textarea>
     </div>
     <div class="hifdh-field">
+      <label>📸 Teacher's Sheet</label>
+      <div id="photo-preview" style="margin-bottom:8px;">${log.photo ? `<img src="${log.photo}" style="max-width:100%;border-radius:8px;border:1px solid var(--border);" onclick="viewPhoto()">` : ''}</div>
+      <div style="display:flex;gap:8px;">
+        <label class="btn btn-primary" style="cursor:pointer;flex:1;text-align:center;">📷 Take Photo<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="savePhoto(this)"></label>
+        <label class="btn btn-primary" style="cursor:pointer;flex:1;text-align:center;background:var(--accent2);">🖼️ Upload<input type="file" accept="image/*" style="display:none;" onchange="savePhoto(this)"></label>
+        ${log.photo ? `<button class="btn btn-sm btn-danger" onclick="removePhoto()">✕</button>` : ''}
+      </div>
+    </div>
+    <div class="hifdh-field">
       <label>📝 Shireen's Notes</label>
       <textarea onchange="updateHifdh('notes',this.value)" placeholder="Anything else to remember...">${esc(log.notes)}</textarea>
     </div>`;
@@ -791,6 +800,45 @@ function updateHifdh(field, value) {
   const log = getHifdhLog(hifdhDay);
   log[field] = value;
   saveHifdhLog(hifdhDay, log);
+}
+
+function savePhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    // Resize to save localStorage space
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      const maxW = 800;
+      const scale = Math.min(1, maxW / img.width);
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+      const log = getHifdhLog(hifdhDay);
+      log.photo = dataUrl;
+      saveHifdhLog(hifdhDay, log);
+      renderHifdh();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function removePhoto() {
+  const log = getHifdhLog(hifdhDay);
+  delete log.photo;
+  saveHifdhLog(hifdhDay, log);
+  renderHifdh();
+}
+
+function viewPhoto() {
+  const log = getHifdhLog(hifdhDay);
+  if (!log.photo) return;
+  const w = window.open();
+  w.document.write(`<img src="${log.photo}" style="max-width:100%;margin:auto;display:block;">`);
 }
 
 function esc(s) { return (s||'').replace(/"/g,'&quot;'); }
