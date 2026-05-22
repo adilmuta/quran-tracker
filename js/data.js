@@ -33,7 +33,7 @@ const DEFAULT_REWARDS = [
 // === HELPERS ===
 function load(k, d) { try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; } }
 function save(k, v) { localStorage.setItem(k, JSON.stringify(v)); syncToFirestore(k, v); }
-function dateKey(d) { return d.toISOString().split('T')[0]; }
+function dateKey(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function today() { const d = new Date(); d.setHours(0,0,0,0); return d; }
 let currentDay = new Date(); currentDay.setHours(0,0,0,0);
 
