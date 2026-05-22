@@ -43,10 +43,21 @@ header h1 { font-size: 1.4rem; }
 .pin-error { color: var(--danger); font-size: 0.85rem; margin-top: 16px; min-height: 20px; }
 .pin-setup { font-size: 0.8rem; color: var(--muted); margin-top: 20px; }
 
-/* Tabs */
-.tabs { display: flex; gap: 4px; margin-bottom: 16px; background: var(--card); border-radius: var(--radius); padding: 4px; border: 1px solid var(--border); overflow-x: auto; }
-.tab { flex: 1; padding: 10px 6px; text-align: center; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 500; transition: all 0.2s; white-space: nowrap; }
-.tab.active { background: var(--accent); color: white; }
+/* Tabs - bottom nav */
+.bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 8px 0 env(safe-area-inset-bottom, 8px); z-index: 50; }
+.nav-item { display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; padding: 4px 12px; border-radius: 8px; font-size: 0.7rem; color: var(--muted); }
+.nav-item.active { color: var(--accent); }
+.nav-item .icon { font-size: 1.3rem; }
+
+/* Hamburger menu */
+.menu-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 90; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+.menu-overlay.open { opacity: 1; pointer-events: all; }
+.menu-panel { position: fixed; top: 0; right: -280px; width: 280px; height: 100%; background: var(--card); z-index: 91; transition: right 0.3s; padding: 60px 20px 20px; overflow-y: auto; }
+.menu-overlay.open .menu-panel { right: 0; }
+.menu-item { display: flex; align-items: center; gap: 12px; padding: 14px 12px; border-radius: 10px; cursor: pointer; font-size: 0.95rem; margin-bottom: 4px; }
+.menu-item:hover, .menu-item.active { background: var(--bg); }
+.menu-item .mi-icon { font-size: 1.2rem; width: 28px; text-align: center; }
+.menu-close { position: absolute; top: 16px; right: 16px; font-size: 1.5rem; cursor: pointer; padding: 4px 10px; }
 
 /* Cards */
 .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
@@ -168,14 +179,26 @@ header h1 { font-size: 1.4rem; }
     </div>
   </header>
 
-  <div class="tabs">
-    <div class="tab active" onclick="showTab('dashboard',this)">🏠</div>
-    <div class="tab" onclick="showTab('hifdh',this)">🕌</div>
-    <div class="tab" onclick="showTab('quran',this)">📖</div>
-    <div class="tab" onclick="showTab('planner',this)">📅</div>
-    <div class="tab" onclick="showTab('report',this)">📊</div>
-    <div class="tab" onclick="showTab('rewards',this)">⭐</div>
-    <div class="tab" onclick="showTab('routine',this)">⚙️</div>
+  <!-- Hamburger Menu -->
+  <div class="menu-overlay" id="menu-overlay" onclick="closeMenu()">
+    <div class="menu-panel" onclick="event.stopPropagation()">
+      <div class="menu-close" onclick="closeMenu()">✕</div>
+      <div class="menu-item" onclick="navTo('dashboard')"><span class="mi-icon">🏠</span> Home</div>
+      <div class="menu-item" onclick="navTo('hifdh')"><span class="mi-icon">🕌</span> Hifdh Log</div>
+      <div class="menu-item" onclick="navTo('quran')"><span class="mi-icon">📖</span> Exam Prep</div>
+      <div class="menu-item" onclick="navTo('planner')"><span class="mi-icon">📅</span> Daily Planner</div>
+      <div class="menu-item" onclick="navTo('report')"><span class="mi-icon">📊</span> Monthly Report</div>
+      <div class="menu-item" onclick="navTo('rewards')"><span class="mi-icon">⭐</span> Rewards</div>
+      <div class="menu-item" onclick="navTo('routine')"><span class="mi-icon">⚙️</span> Settings</div>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <div class="bottom-nav">
+    <div class="nav-item active" onclick="navTo('dashboard')"><span class="icon">🏠</span>Home</div>
+    <div class="nav-item" onclick="navTo('hifdh')"><span class="icon">🕌</span>Hifdh</div>
+    <div class="nav-item" onclick="navTo('planner')"><span class="icon">📅</span>Planner</div>
+    <div class="nav-item" onclick="openMenu()"><span class="icon">☰</span>More</div>
   </div>
 
   <div id="dashboard" class="tab-content">
@@ -411,12 +434,17 @@ function toggleTheme() {
 }
 if (load('theme','light') === 'dark') { document.documentElement.setAttribute('data-theme','dark'); document.querySelector('.theme-toggle').textContent = '☀️'; }
 
-// === TABS ===
-function showTab(id, el) {
+// === TABS / NAV ===
+function navTo(id) {
   document.querySelectorAll('.tab-content').forEach(e => e.classList.add('hidden'));
   document.getElementById(id).classList.remove('hidden');
-  document.querySelectorAll('.tab').forEach(e => e.classList.remove('active'));
-  if(el) el.classList.add('active');
+  // Update bottom nav active state
+  document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active'));
+  const navItems = document.querySelectorAll('.nav-item');
+  if (id==='dashboard') navItems[0].classList.add('active');
+  else if (id==='hifdh') navItems[1].classList.add('active');
+  else if (id==='planner') navItems[2].classList.add('active');
+  closeMenu();
   if (id==='dashboard') renderDashboard();
   if (id==='hifdh') renderHifdh();
   if (id==='quran') renderQuran();
@@ -425,6 +453,9 @@ function showTab(id, el) {
   if (id==='rewards') renderRewards();
   if (id==='routine') renderRoutine();
 }
+function showTab(id, el) { navTo(id); }
+function openMenu() { document.getElementById('menu-overlay').classList.add('open'); }
+function closeMenu() { document.getElementById('menu-overlay').classList.remove('open'); }
 
 // === STARS ===
 function getStars() { return load('stars', 0); }
