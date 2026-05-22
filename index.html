@@ -2,13 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Quran Tracker & Daily Planner</title>
+<meta name="apple-mobile-web-app-title" content="Quran Tracker">
+<meta name="theme-color" content="#2d6a4f">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg">
-<meta name="theme-color" content="#2d6a4f">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Quran Tracker & Daily Planner</title>
 <style>
 :root {
   --bg: #f8f9fa; --card: #fff; --text: #1a1a2e; --accent: #2d6a4f; --accent2: #40916c;
@@ -21,18 +23,30 @@
   --gold: #f4a261;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; transition: all 0.3s; }
-.container { max-width: 600px; margin: 0 auto; padding: 16px; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; min-height: 100dvh; transition: all 0.3s; -webkit-tap-highlight-color: transparent; }
+.container { max-width: 600px; margin: 0 auto; padding: 16px; padding-bottom: 80px; }
 header { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; margin-bottom: 16px; }
 header h1 { font-size: 1.4rem; }
-header h1 span { font-size: 1.6rem; }
-.theme-toggle { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 6px 12px; cursor: pointer; font-size: 1.1rem; }
+.header-btns { display: flex; gap: 8px; }
+.theme-toggle, .lock-btn { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 6px 12px; cursor: pointer; font-size: 1.1rem; }
+
+/* PIN Screen */
+.pin-screen { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; }
+.pin-screen h2 { font-size: 1.5rem; margin-bottom: 8px; }
+.pin-screen .subtitle { color: var(--muted); font-size: 0.85rem; margin-bottom: 24px; }
+.pin-dots { display: flex; gap: 12px; margin-bottom: 32px; }
+.pin-dot { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--accent); transition: all 0.2s; }
+.pin-dot.filled { background: var(--accent); }
+.pin-pad { display: grid; grid-template-columns: repeat(3, 70px); gap: 12px; }
+.pin-key { width: 70px; height: 70px; border-radius: 50%; border: 1px solid var(--border); background: var(--card); font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.pin-key:active { background: var(--accent); color: white; }
+.pin-error { color: var(--danger); font-size: 0.85rem; margin-top: 16px; min-height: 20px; }
+.pin-setup { font-size: 0.8rem; color: var(--muted); margin-top: 20px; }
 
 /* Tabs */
-.tabs { display: flex; gap: 4px; margin-bottom: 16px; background: var(--card); border-radius: var(--radius); padding: 4px; border: 1px solid var(--border); }
-.tab { flex: 1; padding: 10px 8px; text-align: center; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: all 0.2s; }
+.tabs { display: flex; gap: 4px; margin-bottom: 16px; background: var(--card); border-radius: var(--radius); padding: 4px; border: 1px solid var(--border); overflow-x: auto; }
+.tab { flex: 1; padding: 10px 6px; text-align: center; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 500; transition: all 0.2s; white-space: nowrap; }
 .tab.active { background: var(--accent); color: white; }
-.tab:not(.active):hover { background: var(--border); }
 
 /* Cards */
 .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
@@ -42,96 +56,130 @@ header h1 span { font-size: 1.6rem; }
 .progress-bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin: 8px 0; }
 .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 4px; transition: width 0.4s; }
 .stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
-.stat { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; flex: 1; min-width: 100px; text-align: center; }
+.stat { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; flex: 1; min-width: 80px; text-align: center; }
 .stat .num { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
-.stat .label { font-size: 0.75rem; color: var(--muted); }
+.stat .label { font-size: 0.7rem; color: var(--muted); }
 
 /* Checklist */
 .check-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
 .check-item:last-child { border-bottom: none; }
-.check-item input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); cursor: pointer; }
+.check-item input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent); cursor: pointer; }
 .check-item label { flex: 1; cursor: pointer; font-size: 0.9rem; }
 .check-item.done label { text-decoration: line-through; color: var(--muted); }
 .check-item .time { font-size: 0.75rem; color: var(--muted); min-width: 50px; }
 
 /* Surah grid */
 .surah-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.surah-item { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 8px; border: 1px solid var(--border); font-size: 0.85rem; }
+.surah-item { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 8px; border: 1px solid var(--border); font-size: 0.82rem; }
 .surah-item.complete { background: var(--ok); color: white; border-color: var(--ok); }
-.surah-item input { width: 16px; height: 16px; accent-color: var(--ok); }
-
-/* Daily planner */
-.time-block { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
-.time-block:last-child { border-bottom: none; }
-.time-label { min-width: 55px; font-size: 0.75rem; font-weight: 600; color: var(--accent); padding-top: 2px; }
-.time-content { flex: 1; }
-.time-content input { width: 100%; background: transparent; border: none; border-bottom: 1px dashed var(--border); padding: 4px 0; font-size: 0.9rem; color: var(--text); outline: none; }
-.time-content input:focus { border-color: var(--accent); }
-
-/* Streak */
-.streak { display: flex; align-items: center; gap: 8px; padding: 12px; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: white; border-radius: var(--radius); margin-bottom: 16px; }
-.streak .fire { font-size: 1.5rem; }
-.streak .count { font-size: 1.3rem; font-weight: 700; }
-.streak .text { font-size: 0.85rem; opacity: 0.9; }
+.surah-item input { width: 18px; height: 18px; accent-color: var(--ok); }
 
 /* Day nav */
 .day-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .day-nav button { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; cursor: pointer; font-size: 1rem; color: var(--text); }
 .day-nav .date { font-weight: 600; font-size: 0.95rem; }
 
-/* Exam countdown */
+/* Countdown */
 .countdown { text-align: center; padding: 16px; background: linear-gradient(135deg, var(--gold), var(--danger)); color: white; border-radius: var(--radius); margin-bottom: 16px; }
 .countdown .days { font-size: 2.5rem; font-weight: 800; }
 .countdown .label { font-size: 0.85rem; opacity: 0.9; }
 
+/* Streak */
+.streak { display: flex; align-items: center; gap: 8px; padding: 12px; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: white; border-radius: var(--radius); margin-bottom: 16px; }
+.streak .fire { font-size: 1.5rem; }
+.streak .count { font-size: 1.3rem; font-weight: 700; }
+
+/* Rewards */
+.rewards-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.stars-display { font-size: 1.8rem; font-weight: 700; color: var(--gold); display: flex; align-items: center; gap: 6px; }
+.reward-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; }
+.reward-item .cost { background: var(--gold); color: white; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; }
+.reward-item .name { font-size: 0.9rem; }
+.reward-item button { background: var(--accent); color: white; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; }
+.reward-item button:disabled { background: var(--muted); cursor: not-allowed; }
+.reward-log { font-size: 0.8rem; color: var(--muted); margin-top: 12px; max-height: 120px; overflow-y: auto; }
+.reward-log div { padding: 4px 0; border-bottom: 1px solid var(--border); }
+
 /* Section */
 .section-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 16px 0 8px; font-weight: 600; }
 
-/* Routine template */
+/* Routine */
+.time-block { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); align-items: center; }
+.time-label { min-width: 55px; font-size: 0.75rem; font-weight: 600; color: var(--accent); }
 .routine-editor { margin-top: 12px; }
 .routine-editor input { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 0.9rem; margin-bottom: 8px; }
 .btn { padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 500; }
 .btn-primary { background: var(--accent); color: white; }
 .btn-sm { padding: 5px 10px; font-size: 0.8rem; }
 .btn-danger { background: var(--danger); color: white; }
+.btn-gold { background: var(--gold); color: white; }
 
 .hidden { display: none; }
+
+/* Celebration */
+.celebration { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 4rem; animation: pop 0.6s ease-out forwards; z-index: 100; pointer-events: none; }
+@keyframes pop { 0% { transform: translate(-50%,-50%) scale(0); opacity: 1; } 50% { transform: translate(-50%,-50%) scale(1.3); } 100% { transform: translate(-50%,-50%) scale(1); opacity: 0; } }
 </style>
 </head>
 <body>
-<div class="container">
+
+<!-- PIN Screen -->
+<div class="pin-screen" id="pin-screen">
+  <h2>📖 Quran Tracker</h2>
+  <p class="subtitle" id="pin-subtitle">Enter PIN</p>
+  <div class="pin-dots" id="pin-dots">
+    <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+  </div>
+  <div class="pin-pad">
+    <div class="pin-key" onclick="pinInput(1)">1</div>
+    <div class="pin-key" onclick="pinInput(2)">2</div>
+    <div class="pin-key" onclick="pinInput(3)">3</div>
+    <div class="pin-key" onclick="pinInput(4)">4</div>
+    <div class="pin-key" onclick="pinInput(5)">5</div>
+    <div class="pin-key" onclick="pinInput(6)">6</div>
+    <div class="pin-key" onclick="pinInput(7)">7</div>
+    <div class="pin-key" onclick="pinInput(8)">8</div>
+    <div class="pin-key" onclick="pinInput(9)">9</div>
+    <div class="pin-key" onclick="pinInput('del')">⌫</div>
+    <div class="pin-key" onclick="pinInput(0)">0</div>
+    <div class="pin-key" onclick="pinInput('ok')">✓</div>
+  </div>
+  <p class="pin-error" id="pin-error"></p>
+  <p class="pin-setup" id="pin-setup-hint"></p>
+</div>
+
+<!-- Main App -->
+<div class="container hidden" id="app">
   <header>
     <h1><span>📖</span> Quran Tracker</h1>
-    <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
+    <div class="header-btns">
+      <button class="lock-btn" onclick="lockApp()">🔒</button>
+      <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
+    </div>
   </header>
 
   <div class="tabs">
-    <div class="tab active" onclick="showTab('dashboard')">🏠 Home</div>
-    <div class="tab" onclick="showTab('quran')">📖 Quran</div>
-    <div class="tab" onclick="showTab('planner')">📅 Planner</div>
-    <div class="tab" onclick="showTab('routine')">⚙️ Routine</div>
+    <div class="tab active" onclick="showTab('dashboard',this)">🏠</div>
+    <div class="tab" onclick="showTab('quran',this)">📖</div>
+    <div class="tab" onclick="showTab('planner',this)">📅</div>
+    <div class="tab" onclick="showTab('rewards',this)">⭐</div>
+    <div class="tab" onclick="showTab('routine',this)">⚙️</div>
   </div>
 
   <div id="dashboard" class="tab-content">
     <div class="countdown" id="countdown"></div>
     <div class="streak" id="streak"></div>
     <div class="stats" id="stats"></div>
-    <div class="card">
-      <h3>📋 Today's Tasks</h3>
-      <div id="today-summary"></div>
-    </div>
+    <div class="card"><h3>📋 Next Up</h3><div id="today-summary"></div></div>
   </div>
 
   <div id="quran" class="tab-content hidden">
-    <div class="card">
-      <h3>📊 Overall Progress</h3>
-      <div id="quran-progress"></div>
-    </div>
-    <div class="section-title">Juz 28 — Al-Mujadila to At-Tahrim</div>
+    <div class="card"><h3>📊 Progress</h3><div id="quran-progress"></div></div>
+    <div class="section-title">Juz 28</div>
     <div class="card"><div class="surah-grid" id="juz28"></div></div>
-    <div class="section-title">Juz 27 — Adh-Dhariyat to Al-Hadid</div>
+    <div class="section-title">Juz 27</div>
     <div class="card"><div class="surah-grid" id="juz27"></div></div>
-    <div class="section-title">Juz 26 — Al-Ahqaf to Adh-Dhariyat</div>
+    <div class="section-title">Juz 26</div>
     <div class="card"><div class="surah-grid" id="juz26"></div></div>
   </div>
 
@@ -144,60 +192,177 @@ header h1 span { font-size: 1.6rem; }
     <div class="card" id="planner-tasks"></div>
   </div>
 
+  <div id="rewards" class="tab-content hidden">
+    <div class="card">
+      <div class="rewards-header">
+        <h3>⭐ Stars Earned</h3>
+        <div class="stars-display">⭐ <span id="star-count">0</span></div>
+      </div>
+      <p style="font-size:0.8rem;color:var(--muted);">Earn stars by completing tasks & surahs. Spend them on rewards!</p>
+      <div style="margin-top:12px;font-size:0.85rem;">
+        <div>✅ Complete a daily task = <b>1 ⭐</b></div>
+        <div>📖 Mark a surah confident = <b>3 ⭐</b></div>
+        <div>🔥 Complete ALL daily tasks = <b>5 ⭐ bonus</b></div>
+        <div>📅 7-day streak = <b>20 ⭐ bonus</b></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>🎁 Rewards Shop</h3>
+      <div id="rewards-shop"></div>
+    </div>
+    <div class="card">
+      <h3>📜 History</h3>
+      <div class="reward-log" id="reward-log"></div>
+    </div>
+    <div class="card">
+      <h3>➕ Add Custom Reward</h3>
+      <div class="routine-editor">
+        <input id="new-reward-name" placeholder="Reward name (e.g. Ice cream 🍦)">
+        <input id="new-reward-cost" type="number" placeholder="Star cost (e.g. 15)">
+        <button class="btn btn-gold" onclick="addReward()">Add Reward</button>
+      </div>
+    </div>
+  </div>
+
   <div id="routine" class="tab-content hidden">
     <div class="card">
-      <h3>⚙️ Daily Routine Template</h3>
-      <p style="font-size:0.8rem;color:var(--muted);margin-bottom:12px;">Set your kid's default daily schedule. This generates tasks each day.</p>
+      <h3>⚙️ Daily Routine</h3>
+      <p style="font-size:0.8rem;color:var(--muted);margin-bottom:12px;">Default schedule generated each day.</p>
       <div id="routine-list"></div>
       <div class="routine-editor">
-        <input id="new-time" type="time" placeholder="Time">
-        <input id="new-task" type="text" placeholder="Task (e.g. Quran revision - Juz 28)">
+        <input id="new-time" type="time">
+        <input id="new-task" type="text" placeholder="Task name">
         <button class="btn btn-primary" onclick="addRoutineItem()">+ Add</button>
       </div>
     </div>
     <div class="card">
-      <h3>🗑️ Reset</h3>
-      <button class="btn btn-danger" onclick="if(confirm('Reset ALL data?')){localStorage.clear();location.reload();}">Reset All Data</button>
+      <h3>🔐 Change PIN</h3>
+      <button class="btn btn-primary" onclick="changePin()">Change PIN</button>
+    </div>
+    <div class="card">
+      <h3>🗑️ Reset All Data</h3>
+      <button class="btn btn-danger" onclick="if(confirm('Reset ALL data including stars?')){localStorage.clear();location.reload();}">Reset</button>
     </div>
   </div>
 </div>
 
 <script>
+// === DATA ===
 const SURAHS = {
   juz28: [{n:58,name:"Al-Mujadila"},{n:59,name:"Al-Hashr"},{n:60,name:"Al-Mumtahina"},{n:61,name:"As-Saff"},{n:62,name:"Al-Jumu'ah"},{n:63,name:"Al-Munafiqun"},{n:64,name:"At-Taghabun"},{n:65,name:"At-Talaq"},{n:66,name:"At-Tahrim"}],
-  juz27: [{n:51,name:"Adh-Dhariyat"},{n:52,name:"At-Tur"},{n:53,name:"An-Najm"},{n:54,name:"Al-Qamar"},{n:55,name:"Ar-Rahman"},{n:56,name:"Al-Waqi'ah"},{n:57,name:"Al-Hadid"}],
-  juz26: [{n:46,name:"Al-Ahqaf"},{n:47,name:"Muhammad"},{n:48,name:"Al-Fath"},{n:49,name:"Al-Hujurat"},{n:50,name:"Qaf"},{n:51,name:"Adh-Dhariyat (1-30)"}]
+  juz27: [{n:52,name:"At-Tur"},{n:53,name:"An-Najm"},{n:54,name:"Al-Qamar"},{n:55,name:"Ar-Rahman"},{n:56,name:"Al-Waqi'ah"},{n:57,name:"Al-Hadid"}],
+  juz26: [{n:46,name:"Al-Ahqaf"},{n:47,name:"Muhammad"},{n:48,name:"Al-Fath"},{n:49,name:"Al-Hujurat"},{n:50,name:"Qaf"},{n:51,name:"Adh-Dhariyat"}]
 };
 const EXAM_DATE = new Date('2026-06-02');
 const DEFAULT_ROUTINE = [
   {time:"06:00",task:"Fajr & Morning Adhkar"},
-  {time:"06:30",task:"Quran Revision (Morning Session - 45 min)"},
+  {time:"06:30",task:"Quran Revision — Morning (45 min)"},
   {time:"07:30",task:"Breakfast"},
   {time:"08:00",task:"Free play / Outdoor"},
   {time:"10:00",task:"Study / Homework"},
   {time:"12:00",task:"Dhuhr & Lunch"},
-  {time:"13:00",task:"Quran Revision (Afternoon Session - 30 min)"},
+  {time:"13:00",task:"Quran Revision — Afternoon (30 min)"},
   {time:"14:00",task:"Rest / Nap"},
   {time:"15:30",task:"Asr & Snack"},
   {time:"16:00",task:"Play / Activity"},
   {time:"18:00",task:"Maghrib & Dinner"},
-  {time:"19:00",task:"Quran Revision (Evening - 20 min)"},
+  {time:"19:00",task:"Quran Revision — Evening (20 min)"},
   {time:"19:30",task:"Family time / Reading"},
-  {time:"20:30",task:"Isha & Bedtime routine"},
+  {time:"20:30",task:"Isha & Bedtime"},
   {time:"21:00",task:"Sleep 😴"}
 ];
+const DEFAULT_REWARDS = [
+  {name:"30 min screen time 📱", cost: 10},
+  {name:"Ice cream 🍦", cost: 15},
+  {name:"Choose dinner 🍕", cost: 20},
+  {name:"New book / toy 📚", cost: 50},
+  {name:"Day trip / outing 🎢", cost: 100}
+];
 
-// State
-let currentDay = new Date();
-currentDay.setHours(0,0,0,0);
-
-function load(key, def) { try { return JSON.parse(localStorage.getItem(key)) || def; } catch { return def; } }
-function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
-
+// === HELPERS ===
+function load(k, d) { try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; } }
+function save(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
 function dateKey(d) { return d.toISOString().split('T')[0]; }
 function today() { const d = new Date(); d.setHours(0,0,0,0); return d; }
+let currentDay = new Date(); currentDay.setHours(0,0,0,0);
 
-// Theme
+// === PIN ===
+let pinBuffer = '';
+let pinMode = 'unlock'; // 'unlock', 'setup', 'change1', 'change2'
+let newPinTemp = '';
+
+function initPin() {
+  const stored = localStorage.getItem('pin');
+  if (!stored) {
+    pinMode = 'setup';
+    document.getElementById('pin-subtitle').textContent = 'Create a 4-digit PIN';
+    document.getElementById('pin-setup-hint').textContent = 'First time setup';
+  }
+}
+function pinInput(key) {
+  if (key === 'del') { pinBuffer = pinBuffer.slice(0,-1); }
+  else if (key === 'ok') { submitPin(); return; }
+  else if (pinBuffer.length < 4) { pinBuffer += key; }
+  updateDots();
+  if (pinBuffer.length === 4) setTimeout(submitPin, 200);
+}
+function updateDots() {
+  const dots = document.querySelectorAll('#pin-dots .pin-dot');
+  dots.forEach((d,i) => d.classList.toggle('filled', i < pinBuffer.length));
+}
+function submitPin() {
+  const pin = pinBuffer;
+  pinBuffer = '';
+  if (pinMode === 'setup') {
+    localStorage.setItem('pin', pin);
+    unlockApp();
+  } else if (pinMode === 'change1') {
+    newPinTemp = pin;
+    pinMode = 'change2';
+    document.getElementById('pin-subtitle').textContent = 'Confirm new PIN';
+    updateDots();
+  } else if (pinMode === 'change2') {
+    if (pin === newPinTemp) {
+      localStorage.setItem('pin', pin);
+      unlockApp();
+    } else {
+      document.getElementById('pin-error').textContent = 'PINs don\'t match. Try again.';
+      pinMode = 'change1';
+      document.getElementById('pin-subtitle').textContent = 'Enter new PIN';
+      updateDots();
+    }
+  } else {
+    if (pin === localStorage.getItem('pin')) { unlockApp(); }
+    else { document.getElementById('pin-error').textContent = 'Wrong PIN'; updateDots(); setTimeout(() => document.getElementById('pin-error').textContent = '', 2000); }
+  }
+}
+function unlockApp() {
+  document.getElementById('pin-screen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  renderDashboard();
+}
+function lockApp() {
+  pinMode = 'unlock';
+  pinBuffer = '';
+  document.getElementById('pin-subtitle').textContent = 'Enter PIN';
+  document.getElementById('pin-error').textContent = '';
+  document.getElementById('pin-setup-hint').textContent = '';
+  updateDots();
+  document.getElementById('pin-screen').classList.remove('hidden');
+  document.getElementById('app').classList.add('hidden');
+}
+function changePin() {
+  pinMode = 'change1';
+  pinBuffer = '';
+  document.getElementById('pin-subtitle').textContent = 'Enter new PIN';
+  document.getElementById('pin-error').textContent = '';
+  document.getElementById('pin-setup-hint').textContent = '';
+  updateDots();
+  document.getElementById('pin-screen').classList.remove('hidden');
+  document.getElementById('app').classList.add('hidden');
+}
+
+// === THEME ===
 function toggleTheme() {
   const dark = document.documentElement.getAttribute('data-theme') === 'dark';
   document.documentElement.setAttribute('data-theme', dark ? '' : 'dark');
@@ -206,19 +371,39 @@ function toggleTheme() {
 }
 if (load('theme','light') === 'dark') { document.documentElement.setAttribute('data-theme','dark'); document.querySelector('.theme-toggle').textContent = '☀️'; }
 
-// Tabs
-function showTab(id) {
-  document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+// === TABS ===
+function showTab(id, el) {
+  document.querySelectorAll('.tab-content').forEach(e => e.classList.add('hidden'));
   document.getElementById(id).classList.remove('hidden');
-  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
-  event.target.classList.add('active');
-  if (id === 'dashboard') renderDashboard();
-  if (id === 'quran') renderQuran();
-  if (id === 'planner') renderPlanner();
-  if (id === 'routine') renderRoutine();
+  document.querySelectorAll('.tab').forEach(e => e.classList.remove('active'));
+  if(el) el.classList.add('active');
+  if (id==='dashboard') renderDashboard();
+  if (id==='quran') renderQuran();
+  if (id==='planner') renderPlanner();
+  if (id==='rewards') renderRewards();
+  if (id==='routine') renderRoutine();
 }
 
-// Quran tracker
+// === STARS ===
+function getStars() { return load('stars', 0); }
+function addStars(n, reason) {
+  const s = getStars() + n;
+  save('stars', s);
+  const log = load('star_log', []);
+  log.unshift({n, reason, date: new Date().toISOString()});
+  if (log.length > 50) log.length = 50;
+  save('star_log', log);
+  if (n > 0) celebrate();
+}
+function celebrate() {
+  const el = document.createElement('div');
+  el.className = 'celebration';
+  el.textContent = '⭐';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 700);
+}
+
+// === QURAN ===
 function renderQuran() {
   let total = 0, done = 0;
   ['juz28','juz27','juz26'].forEach(juz => {
@@ -230,23 +415,24 @@ function renderQuran() {
       if (checked) done++;
       return `<div class="surah-item ${checked?'complete':''}">
         <input type="checkbox" ${checked?'checked':''} onchange="toggleSurah('${juz}',${s.n},this.checked)">
-        <span>${s.n}. ${s.name}</span>
-      </div>`;
+        <span>${s.n}. ${s.name}</span></div>`;
     }).join('');
   });
   const pct = total ? Math.round(done/total*100) : 0;
   document.getElementById('quran-progress').innerHTML = `
-    <div style="display:flex;justify-content:space-between;font-size:0.85rem;"><span>${done}/${total} surahs confident</span><span>${pct}%</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:0.85rem;"><span>${done}/${total} surahs</span><span>${pct}%</span></div>
     <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>`;
 }
 function toggleSurah(juz, n, checked) {
   const progress = load('surah_' + juz, {});
+  const wasChecked = progress[n] || false;
   progress[n] = checked;
   save('surah_' + juz, progress);
+  if (checked && !wasChecked) addStars(3, `Surah ${n} marked confident`);
   renderQuran();
 }
 
-// Planner
+// === PLANNER ===
 function getRoutine() { return load('routine', DEFAULT_ROUTINE); }
 function getDayTasks(d) {
   const key = 'tasks_' + dateKey(d);
@@ -260,7 +446,6 @@ function renderPlanner() {
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   document.getElementById('planner-date').textContent = `${days[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()}`;
   const tasks = getDayTasks(d);
-  const key = 'tasks_' + dateKey(d);
   document.getElementById('planner-tasks').innerHTML = `<h3>📋 Schedule</h3>` + tasks.map((t,i) => `
     <div class="check-item ${t.done?'done':''}">
       <input type="checkbox" ${t.done?'checked':''} onchange="toggleTask(${i},this.checked)">
@@ -271,23 +456,27 @@ function renderPlanner() {
 function toggleTask(i, checked) {
   const key = 'tasks_' + dateKey(currentDay);
   const tasks = load(key, []);
+  const wasDone = tasks[i].done;
   tasks[i].done = checked;
   save(key, tasks);
+  if (checked && !wasDone) {
+    addStars(1, tasks[i].task);
+    // Check if all done
+    if (tasks.every(t => t.done)) addStars(5, 'All daily tasks complete! 🎉');
+  }
   updateStreak();
   renderPlanner();
 }
 function changeDay(delta) { currentDay.setDate(currentDay.getDate() + delta); renderPlanner(); }
 
-// Routine editor
+// === ROUTINE ===
 function renderRoutine() {
   const routine = getRoutine();
   document.getElementById('routine-list').innerHTML = routine.map((r,i) => `
     <div class="time-block">
       <span class="time-label">${r.time}</span>
-      <div class="time-content" style="display:flex;align-items:center;gap:8px;">
-        <span style="flex:1;font-size:0.9rem;">${r.task}</span>
-        <button class="btn btn-sm btn-danger" onclick="removeRoutineItem(${i})">✕</button>
-      </div>
+      <span style="flex:1;font-size:0.9rem;">${r.task}</span>
+      <button class="btn btn-sm btn-danger" onclick="removeRoutineItem(${i})">✕</button>
     </div>`).join('');
 }
 function addRoutineItem() {
@@ -302,70 +491,94 @@ function addRoutineItem() {
   document.getElementById('new-task').value = '';
   renderRoutine();
 }
-function removeRoutineItem(i) {
-  const routine = getRoutine();
-  routine.splice(i, 1);
-  save('routine', routine);
-  renderRoutine();
+function removeRoutineItem(i) { const r = getRoutine(); r.splice(i,1); save('routine',r); renderRoutine(); }
+
+// === REWARDS ===
+function getRewardsShop() { return load('rewards_shop', DEFAULT_REWARDS); }
+function renderRewards() {
+  document.getElementById('star-count').textContent = getStars();
+  const shop = getRewardsShop();
+  const stars = getStars();
+  document.getElementById('rewards-shop').innerHTML = shop.map((r,i) => `
+    <div class="reward-item">
+      <span class="name">${r.name}</span>
+      <span class="cost">${r.cost} ⭐</span>
+      <button ${stars < r.cost ? 'disabled' : ''} onclick="redeemReward(${i})">Redeem</button>
+    </div>`).join('');
+  const log = load('star_log', []);
+  document.getElementById('reward-log').innerHTML = log.slice(0,20).map(l => {
+    const d = new Date(l.date);
+    return `<div>${l.n > 0 ? '+' : ''}${l.n} ⭐ ${l.reason} <span style="float:right;color:var(--muted)">${d.toLocaleDateString()}</span></div>`;
+  }).join('') || '<div>No activity yet</div>';
+}
+function redeemReward(i) {
+  const shop = getRewardsShop();
+  const r = shop[i];
+  if (getStars() < r.cost) return;
+  if (!confirm(`Redeem "${r.name}" for ${r.cost} ⭐?`)) return;
+  addStars(-r.cost, `Redeemed: ${r.name}`);
+  renderRewards();
+}
+function addReward() {
+  const name = document.getElementById('new-reward-name').value.trim();
+  const cost = parseInt(document.getElementById('new-reward-cost').value);
+  if (!name || !cost) return;
+  const shop = getRewardsShop();
+  shop.push({name, cost});
+  shop.sort((a,b) => a.cost - b.cost);
+  save('rewards_shop', shop);
+  document.getElementById('new-reward-name').value = '';
+  document.getElementById('new-reward-cost').value = '';
+  renderRewards();
 }
 
-// Streak
+// === STREAK ===
 function updateStreak() {
   let streak = 0;
   let d = new Date(today());
-  // Check if today is complete
   const todayTasks = load('tasks_' + dateKey(d), null);
   if (todayTasks && todayTasks.length > 0 && todayTasks.every(t => t.done)) {
-    streak = 1;
-    d.setDate(d.getDate() - 1);
-  } else {
-    d.setDate(d.getDate() - 1);
-  }
-  // Count backwards
+    streak = 1; d.setDate(d.getDate()-1);
+  } else { d.setDate(d.getDate()-1); }
   for (let i = 0; i < 365; i++) {
     const tasks = load('tasks_' + dateKey(d), null);
     if (tasks && tasks.length > 0 && tasks.every(t => t.done)) { streak++; d.setDate(d.getDate()-1); }
     else break;
   }
+  // 7-day streak bonus (award once per streak milestone)
+  const lastStreakBonus = load('last_streak_bonus', 0);
+  if (streak >= 7 && streak - lastStreakBonus >= 7) {
+    addStars(20, `🔥 ${streak}-day streak bonus!`);
+    save('last_streak_bonus', streak);
+  }
   save('streak', streak);
 }
 
-// Dashboard
+// === DASHBOARD ===
 function renderDashboard() {
-  // Countdown
   const daysLeft = Math.max(0, Math.ceil((EXAM_DATE - today()) / 86400000));
   document.getElementById('countdown').innerHTML = daysLeft > 0
-    ? `<div class="days">${daysLeft}</div><div class="label">days until exam (June 2)</div>`
-    : `<div class="days">🎯</div><div class="label">Exam day! بالتوفيق إن شاء الله</div>`;
-
-  // Streak
+    ? `<div class="days">${daysLeft}</div><div class="label">days until exam</div>`
+    : `<div class="days">🎯</div><div class="label">Exam time! بالتوفيق</div>`;
   updateStreak();
   const streak = load('streak', 0);
-  document.getElementById('streak').innerHTML = `<span class="fire">🔥</span><span class="count">${streak}</span><span class="text">day streak</span>`;
-
-  // Stats
-  let totalSurahs = 0, doneSurahs = 0;
-  ['juz28','juz27','juz26'].forEach(juz => {
-    const progress = load('surah_' + juz, {});
-    SURAHS[juz].forEach(s => { totalSurahs++; if(progress[s.n]) doneSurahs++; });
-  });
+  document.getElementById('streak').innerHTML = `<span class="fire">🔥</span><span class="count">${streak}</span><span>day streak</span><span style="margin-left:auto;">⭐ ${getStars()}</span>`;
+  let totalS = 0, doneS = 0;
+  ['juz28','juz27','juz26'].forEach(juz => { const p = load('surah_'+juz,{}); SURAHS[juz].forEach(s => { totalS++; if(p[s.n]) doneS++; }); });
   const todayTasks = getDayTasks(today());
   const todayDone = todayTasks.filter(t => t.done).length;
   document.getElementById('stats').innerHTML = `
-    <div class="stat"><div class="num">${doneSurahs}/${totalSurahs}</div><div class="label">Surahs Done</div></div>
-    <div class="stat"><div class="num">${todayDone}/${todayTasks.length}</div><div class="label">Today's Tasks</div></div>
-    <div class="stat"><div class="num">${Math.round(doneSurahs/totalSurahs*100)}%</div><div class="label">Quran Progress</div></div>`;
-
-  // Today summary
+    <div class="stat"><div class="num">${doneS}/${totalS}</div><div class="label">Surahs</div></div>
+    <div class="stat"><div class="num">${todayDone}/${todayTasks.length}</div><div class="label">Today</div></div>
+    <div class="stat"><div class="num">${Math.round(doneS/totalS*100)}%</div><div class="label">Quran</div></div>`;
   const pending = todayTasks.filter(t => !t.done);
   document.getElementById('today-summary').innerHTML = pending.length === 0
-    ? `<p style="color:var(--ok);font-weight:600;">✅ All done for today! MashaAllah!</p>`
-    : pending.slice(0,5).map(t => `<div class="check-item"><span class="time">${t.time}</span><label>${t.task}</label></div>`).join('')
-      + (pending.length > 5 ? `<p style="font-size:0.8rem;color:var(--muted);margin-top:8px;">+${pending.length-5} more...</p>` : '');
+    ? `<p style="color:var(--ok);font-weight:600;">✅ All done! MashaAllah!</p>`
+    : pending.slice(0,4).map(t => `<div class="check-item"><span class="time">${t.time}</span><label>${t.task}</label></div>`).join('');
 }
 
-// Init
-renderDashboard();
+// === INIT ===
+initPin();
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 </script>
 </body>

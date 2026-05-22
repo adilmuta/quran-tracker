@@ -1,11 +1,13 @@
 {
   "name": "Quran Tracker & Daily Planner",
   "short_name": "Quran Tracker",
+  "description": "Track Quran revision, daily routine & earn stars",
   "start_url": "./index.html",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#1a1a2e",
   "theme_color": "#2d6a4f",
   "icons": [
-    {"src": "icon.svg", "sizes": "any", "type": "image/svg+xml"}
+    {"src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}
   ]
 }
