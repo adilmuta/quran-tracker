@@ -116,6 +116,16 @@ header h1 { font-size: 1.4rem; }
 
 .hidden { display: none; }
 
+/* Hifdh log */
+.hifdh-field { margin-bottom: 12px; }
+.hifdh-field label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--accent); margin-bottom: 4px; }
+.hifdh-field input, .hifdh-field textarea { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 0.9rem; }
+.hifdh-field textarea { resize: vertical; min-height: 50px; }
+.hifdh-field .teacher-tag { display: inline-block; font-size: 0.7rem; background: var(--accent); color: white; padding: 2px 8px; border-radius: 10px; margin-left: 6px; }
+.hifdh-entry { padding: 10px 0; border-bottom: 1px solid var(--border); }
+.hifdh-entry .date-label { font-weight: 600; font-size: 0.85rem; color: var(--accent); }
+.hifdh-entry .detail { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+
 /* Celebration */
 .celebration { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 4rem; animation: pop 0.6s ease-out forwards; z-index: 100; pointer-events: none; }
 @keyframes pop { 0% { transform: translate(-50%,-50%) scale(0); opacity: 1; } 50% { transform: translate(-50%,-50%) scale(1.3); } 100% { transform: translate(-50%,-50%) scale(1); opacity: 0; } }
@@ -160,6 +170,7 @@ header h1 { font-size: 1.4rem; }
 
   <div class="tabs">
     <div class="tab active" onclick="showTab('dashboard',this)">🏠</div>
+    <div class="tab" onclick="showTab('hifdh',this)">🕌</div>
     <div class="tab" onclick="showTab('quran',this)">📖</div>
     <div class="tab" onclick="showTab('planner',this)">📅</div>
     <div class="tab" onclick="showTab('rewards',this)">⭐</div>
@@ -171,6 +182,23 @@ header h1 { font-size: 1.4rem; }
     <div class="streak" id="streak"></div>
     <div class="stats" id="stats"></div>
     <div class="card"><h3>📋 Next Up</h3><div id="today-summary"></div></div>
+  </div>
+
+  <div id="hifdh" class="tab-content hidden">
+    <div class="countdown" id="juz1-countdown" style="background:linear-gradient(135deg,var(--accent),var(--accent2));"></div>
+    <div class="card">
+      <h3>🕌 Today's Hifdh Log</h3>
+      <div class="day-nav">
+        <button onclick="changeHifdhDay(-1)">◀</button>
+        <span class="date" id="hifdh-date"></span>
+        <button onclick="changeHifdhDay(1)">▶</button>
+      </div>
+      <div id="hifdh-form"></div>
+    </div>
+    <div class="card">
+      <h3>📊 Recent Logs</h3>
+      <div id="hifdh-history" style="font-size:0.85rem;"></div>
+    </div>
   </div>
 
   <div id="quran" class="tab-content hidden">
@@ -378,6 +406,7 @@ function showTab(id, el) {
   document.querySelectorAll('.tab').forEach(e => e.classList.remove('active'));
   if(el) el.classList.add('active');
   if (id==='dashboard') renderDashboard();
+  if (id==='hifdh') renderHifdh();
   if (id==='quran') renderQuran();
   if (id==='planner') renderPlanner();
   if (id==='rewards') renderRewards();
@@ -576,6 +605,79 @@ function renderDashboard() {
     ? `<p style="color:var(--ok);font-weight:600;">✅ All done! MashaAllah!</p>`
     : pending.slice(0,4).map(t => `<div class="check-item"><span class="time">${t.time}</span><label>${t.task}</label></div>`).join('');
 }
+
+// === HIFDH LOG ===
+const JUZ1_TEST = new Date('2026-06-01');
+let hifdhDay = new Date(); hifdhDay.setHours(0,0,0,0);
+
+function changeHifdhDay(delta) { hifdhDay.setDate(hifdhDay.getDate() + delta); renderHifdh(); }
+
+function getHifdhLog(d) { return load('hifdh_' + dateKey(d), {sabaq:'',sabqi:'',manzil:'',online:'',notes:''}); }
+function saveHifdhLog(d, data) { save('hifdh_' + dateKey(d), data); }
+
+function renderHifdh() {
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('hifdh-date').textContent = `${days[hifdhDay.getDay()]}, ${months[hifdhDay.getMonth()]} ${hifdhDay.getDate()}`;
+
+  // Juz 1 countdown
+  const daysLeft = Math.max(0, Math.ceil((JUZ1_TEST - today()) / 86400000));
+  document.getElementById('juz1-countdown').innerHTML = daysLeft > 0
+    ? `<div class="days">${daysLeft}</div><div class="label">days until Juz 1 test (Sr. Amany) — June 1</div>`
+    : `<div class="days">📝</div><div class="label">Juz 1 test day! بالتوفيق</div>`;
+
+  const log = getHifdhLog(hifdhDay);
+  document.getElementById('hifdh-form').innerHTML = `
+    <div class="hifdh-field">
+      <label>📗 Sabaq (New Lesson) <span class="teacher-tag">Sr. Amany</span></label>
+      <input value="${esc(log.sabaq)}" onchange="updateHifdh('sabaq',this.value)" placeholder="e.g. Al-Baqarah ayah 142-145">
+    </div>
+    <div class="hifdh-field">
+      <label>📘 Sabqi (Recent Revision) <span class="teacher-tag">Sr. Amany</span></label>
+      <input value="${esc(log.sabqi)}" onchange="updateHifdh('sabqi',this.value)" placeholder="e.g. Al-Baqarah ayah 120-141">
+    </div>
+    <div class="hifdh-field">
+      <label>📙 Manzil (Older Revision) <span class="teacher-tag">Sr. Amany</span></label>
+      <input value="${esc(log.manzil)}" onchange="updateHifdh('manzil',this.value)" placeholder="e.g. Al-Fatihah + first 2 pages">
+    </div>
+    <div class="hifdh-field">
+      <label>💻 Online Ustad</label>
+      <input value="${esc(log.online)}" onchange="updateHifdh('online',this.value)" placeholder="e.g. Revision of last 3 pages">
+    </div>
+    <div class="hifdh-field">
+      <label>📝 Notes / Mistakes</label>
+      <textarea onchange="updateHifdh('notes',this.value)" placeholder="Ustad feedback, ayahs to repeat...">${esc(log.notes)}</textarea>
+    </div>`;
+
+  // History
+  const history = [];
+  const d = new Date(today());
+  for (let i = 0; i < 7; i++) {
+    d.setDate(d.getDate() - (i === 0 ? 0 : 1));
+    const l = load('hifdh_' + dateKey(d), null);
+    if (l && (l.sabaq || l.sabqi || l.manzil || l.online)) {
+      history.push({date: new Date(d), ...l});
+    }
+  }
+  document.getElementById('hifdh-history').innerHTML = history.length === 0
+    ? '<p style="color:var(--muted)">No logs yet. Start filling in today!</p>'
+    : history.map(h => `<div class="hifdh-entry">
+        <div class="date-label">${days[h.date.getDay()]}, ${months[h.date.getMonth()]} ${h.date.getDate()}</div>
+        ${h.sabaq ? `<div class="detail">📗 Sabaq: ${h.sabaq}</div>` : ''}
+        ${h.sabqi ? `<div class="detail">📘 Sabqi: ${h.sabqi}</div>` : ''}
+        ${h.manzil ? `<div class="detail">📙 Manzil: ${h.manzil}</div>` : ''}
+        ${h.online ? `<div class="detail">💻 Online: ${h.online}</div>` : ''}
+        ${h.notes ? `<div class="detail">📝 ${h.notes}</div>` : ''}
+      </div>`).join('');
+}
+
+function updateHifdh(field, value) {
+  const log = getHifdhLog(hifdhDay);
+  log[field] = value;
+  saveHifdhLog(hifdhDay, log);
+}
+
+function esc(s) { return (s||'').replace(/"/g,'&quot;'); }
 
 // === INIT ===
 initPin();
