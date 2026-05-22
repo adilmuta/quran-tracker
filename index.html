@@ -201,6 +201,8 @@ header h1 { font-size: 1.4rem; }
       <div class="menu-item" onclick="navTo('hifdh')"><span class="mi-icon">🕌</span> Hifdh Log</div>
       <div class="menu-item" onclick="navTo('quran')"><span class="mi-icon">📖</span> Exam Prep</div>
       <div class="menu-item" onclick="navTo('planner')"><span class="mi-icon">📅</span> Daily Planner</div>
+      <div class="menu-item" onclick="navTo('academics')"><span class="mi-icon">📚</span> Academics</div>
+      <div class="menu-item" onclick="navTo('weekly')"><span class="mi-icon">📋</span> Weekly Review</div>
       <div class="menu-item" onclick="navTo('report')"><span class="mi-icon">📊</span> Monthly Report</div>
       <div class="menu-item" onclick="navTo('rewards')"><span class="mi-icon">⭐</span> Rewards</div>
       <div class="menu-item" onclick="navTo('routine')"><span class="mi-icon">⚙️</span> Settings</div>
@@ -256,6 +258,37 @@ header h1 { font-size: 1.4rem; }
       <button onclick="changeDay(1)">▶</button>
     </div>
     <div class="card" id="planner-tasks"></div>
+  </div>
+
+  <div id="academics" class="tab-content hidden">
+    <div class="card">
+      <h3>📚 Academics</h3>
+      <div class="day-nav">
+        <button onclick="changeAcadDay(-1)">◀</button>
+        <span class="date" id="acad-date"></span>
+        <button onclick="changeAcadDay(1)">▶</button>
+      </div>
+      <div id="acad-form"></div>
+    </div>
+    <div class="card">
+      <h3>➕ Add Subject</h3>
+      <div class="routine-editor">
+        <input id="new-subject" placeholder="Subject name (e.g. Math, Science)">
+        <button class="btn btn-primary" onclick="addSubject()">Add</button>
+      </div>
+      <div id="subject-list" style="margin-top:12px;"></div>
+    </div>
+  </div>
+
+  <div id="weekly" class="tab-content hidden">
+    <div class="day-nav">
+      <button onclick="changeWeek(-1)">◀</button>
+      <span class="date" id="weekly-date"></span>
+      <button onclick="changeWeek(1)">▶</button>
+    </div>
+    <div class="card" id="weekly-summary"></div>
+    <div class="card" id="weekly-hifdh"></div>
+    <div class="card" id="weekly-highlights"></div>
   </div>
 
   <div id="report" class="tab-content hidden">
@@ -539,6 +572,8 @@ function navTo(id) {
   if (id==='hifdh') renderHifdh();
   if (id==='quran') renderQuran();
   if (id==='planner') renderPlanner();
+  if (id==='academics') renderAcademics();
+  if (id==='weekly') renderWeekly();
   if (id==='report') renderReport();
   if (id==='rewards') renderRewards();
   if (id==='routine') renderRoutine();
@@ -932,6 +967,147 @@ function viewPhoto() {
 }
 
 function esc(s) { return (s||'').replace(/"/g,'&quot;'); }
+
+// === ACADEMICS ===
+const DEFAULT_SUBJECTS = ['Math','English','Science','Arabic','Islamic Studies'];
+let acadDay = new Date(); acadDay.setHours(0,0,0,0);
+
+function getSubjects() { return load('subjects', DEFAULT_SUBJECTS); }
+function getAcadLog(d) { return load('acad_' + dateKey(d), {}); }
+
+function changeAcadDay(delta) { acadDay.setDate(acadDay.getDate() + delta); renderAcademics(); }
+
+function renderAcademics() {
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('acad-date').textContent = `${days[acadDay.getDay()]}, ${months[acadDay.getMonth()]} ${acadDay.getDate()}`;
+
+  const subjects = getSubjects();
+  const log = getAcadLog(acadDay);
+
+  document.getElementById('acad-form').innerHTML = subjects.map(subj => {
+    const entry = log[subj] || {homework:'',score:'',notes:''};
+    return `<div style="margin-top:12px;padding:12px;border:1px solid var(--border);border-radius:8px;">
+      <label style="font-weight:600;color:var(--accent);font-size:0.9rem;">${subj}</label>
+      <div style="display:flex;gap:6px;margin-top:6px;">
+        <button class="btn btn-sm ${entry.homework==='done'?'btn-primary':''}" style="border:1px solid var(--border);${entry.homework==='done'?'':'background:var(--bg);color:var(--text);'}" onclick="updateAcad('${subj}','homework','done')">✅ HW Done</button>
+        <button class="btn btn-sm ${entry.homework==='na'?'btn-primary':''}" style="border:1px solid var(--border);${entry.homework==='na'?'':'background:var(--bg);color:var(--text);'}" onclick="updateAcad('${subj}','homework','na')">— No HW</button>
+        <button class="btn btn-sm ${entry.homework==='missed'?'btn-danger':''}" style="border:1px solid var(--border);${entry.homework==='missed'?'':'background:var(--bg);color:var(--text);'}" onclick="updateAcad('${subj}','homework','missed')">❌ Missed</button>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:6px;">
+        <input style="flex:1;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:0.85rem;" type="text" placeholder="Test/quiz score" value="${esc(entry.score)}" onchange="updateAcad('${subj}','score',this.value)">
+        <input style="flex:2;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:0.85rem;" type="text" placeholder="Notes / teacher comment" value="${esc(entry.notes)}" onchange="updateAcad('${subj}','notes',this.value)">
+      </div>
+    </div>`;
+  }).join('');
+
+  // Subject management
+  document.getElementById('subject-list').innerHTML = subjects.map((s,i) =>
+    `<span style="display:inline-block;padding:4px 10px;margin:2px;border-radius:12px;background:var(--bg);border:1px solid var(--border);font-size:0.8rem;">${s} <span style="cursor:pointer;color:var(--danger);" onclick="removeSubject(${i})">✕</span></span>`
+  ).join('');
+}
+
+function updateAcad(subj, field, value) {
+  const log = getAcadLog(acadDay);
+  if (!log[subj]) log[subj] = {homework:'',score:'',notes:''};
+  log[subj][field] = value;
+  save('acad_' + dateKey(acadDay), log);
+  renderAcademics();
+}
+
+function addSubject() {
+  const name = document.getElementById('new-subject').value.trim();
+  if (!name) return;
+  const subjects = getSubjects();
+  if (!subjects.includes(name)) { subjects.push(name); save('subjects', subjects); }
+  document.getElementById('new-subject').value = '';
+  renderAcademics();
+}
+
+function removeSubject(i) {
+  const subjects = getSubjects();
+  subjects.splice(i, 1);
+  save('subjects', subjects);
+  renderAcademics();
+}
+
+// === WEEKLY REVIEW ===
+let weekOffset = 0;
+
+function changeWeek(delta) { weekOffset += delta; renderWeekly(); }
+
+function getWeekDates() {
+  const now = new Date(today());
+  now.setDate(now.getDate() + (weekOffset * 7));
+  const day = now.getDay();
+  const start = new Date(now); start.setDate(now.getDate() - day); // Sunday
+  const end = new Date(start); end.setDate(start.getDate() + 6); // Saturday
+  return {start, end};
+}
+
+function renderWeekly() {
+  const {start, end} = getWeekDates();
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('weekly-date').textContent = `${months[start.getMonth()]} ${start.getDate()} – ${months[end.getMonth()]} ${end.getDate()}`;
+
+  let totalTasks = 0, doneTasks = 0, hifdhDays = 0;
+  let completes = 0, repeats = 0, missed = 0;
+  let sabaqs = [];
+
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start); d.setDate(start.getDate() + i);
+    const dk = dateKey(d);
+
+    const tasks = load('tasks_' + dk, null);
+    if (tasks) { totalTasks += tasks.length; doneTasks += tasks.filter(t => t.done).length; }
+
+    const h = load('hifdh_' + dk, null);
+    if (h) {
+      const has = h.sabaq?.surah || h.sabqi?.surah || h.manzil?.surah || h.online?.surah;
+      if (has) hifdhDays++;
+      ['sabaq','sabqi','manzil','online'].forEach(field => {
+        if (h[field]?.status === 'complete') completes++;
+        if (h[field]?.status === 'repeat') repeats++;
+        if (h[field]?.status === 'missed') missed++;
+      });
+      if (h.sabaq?.surah) {
+        const s = ALL_SURAHS.find(x => x.n == h.sabaq.surah);
+        sabaqs.push(s ? `${s.name} ${h.sabaq.from||''}-${h.sabaq.to||''}` : '');
+      }
+    }
+  }
+
+  const taskPct = totalTasks ? Math.round(doneTasks/totalTasks*100) : 0;
+
+  document.getElementById('weekly-summary').innerHTML = `
+    <h3>📋 Week Summary</h3>
+    <div class="stats">
+      <div class="stat"><div class="num">${taskPct}%</div><div class="label">Tasks</div></div>
+      <div class="stat"><div class="num">${hifdhDays}/7</div><div class="label">Hifdh Days</div></div>
+      <div class="stat"><div class="num">${completes}</div><div class="label">✅ Complete</div></div>
+    </div>
+    <div style="font-size:0.85rem;margin-top:8px;">
+      ✅ ${completes} complete · 🔁 ${repeats} repeat · ❌ ${missed} missed
+    </div>`;
+
+  document.getElementById('weekly-hifdh').innerHTML = `
+    <h3>📖 Sabaq Progress This Week</h3>
+    ${sabaqs.length === 0 ? '<p style="color:var(--muted);">No sabaq logged</p>' :
+    sabaqs.map(s => `<div style="font-size:0.85rem;padding:4px 0;">📗 ${s}</div>`).join('')}`;
+
+  // Highlights / areas to improve
+  let highlights = [];
+  if (taskPct >= 80) highlights.push('🌟 Great task completion rate!');
+  if (hifdhDays >= 5) highlights.push('🌟 Consistent Quran practice!');
+  if (missed > 2) highlights.push('⚠️ Multiple missed sessions — check what\'s blocking');
+  if (repeats > completes) highlights.push('💪 More repeats than completes — keep pushing, almost there!');
+  if (completes > 0 && missed === 0) highlights.push('🏆 No missed sessions — MashaAllah!');
+  if (highlights.length === 0) highlights.push('📝 Keep logging daily for better insights');
+
+  document.getElementById('weekly-highlights').innerHTML = `
+    <h3>💡 Insights</h3>
+    ${highlights.map(h => `<div style="font-size:0.9rem;padding:4px 0;">${h}</div>`).join('')}`;
+}
 
 // === MONTHLY REPORT ===
 let reportMonth = new Date(); reportMonth.setDate(1); reportMonth.setHours(0,0,0,0);
