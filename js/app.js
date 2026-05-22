@@ -1,73 +1,169 @@
 // === PIN ===
 let pinBuffer = '';
-let pinMode = 'unlock'; // 'unlock', 'setup', 'change1', 'change2'
+let pinMode = 'unlock'; // 'unlock', 'setup_child', 'setup_parent', 'change1', 'change2'
 let newPinTemp = '';
+let currentRole = 'child'; // 'child' or 'parent'
 
 function initPin() {
-  const stored = localStorage.getItem('pin');
-  if (!stored) {
-    pinMode = 'setup';
-    document.getElementById('pin-subtitle').textContent = 'Create a 4-digit PIN';
+  const childPin = localStorage.getItem('pin_child');
+  const parentPin = localStorage.getItem('pin_parent');
+  if (!childPin || !parentPin) {
+    pinMode = 'setup_child';
+    document.getElementById('pin-subtitle').textContent = 'Create Child PIN (4 digits)';
     document.getElementById('pin-setup-hint').textContent = 'First time setup';
+    updateDots();
+  } else {
+    document.getElementById('pin-subtitle').textContent = 'Enter PIN';
+    document.getElementById('pin-setup-hint').textContent = '4 digits = child · 6 digits = parent';
+    updateDots();
   }
 }
+
 function pinInput(key) {
   if (key === 'del') { pinBuffer = pinBuffer.slice(0,-1); }
   else if (key === 'ok') { submitPin(); return; }
-  else if (pinBuffer.length < 4) { pinBuffer += key; }
+  else if (pinBuffer.length < 6) { pinBuffer += key; }
   updateDots();
-  if (pinBuffer.length === 4) setTimeout(submitPin, 200);
+  // Auto-submit at 4 digits if it matches child PIN (during unlock)
+  if (pinMode === 'unlock' && pinBuffer.length === 4 && pinBuffer === localStorage.getItem('pin_child')) {
+    setTimeout(submitPin, 200);
+  }
+  // Auto-submit at 6 digits during unlock
+  if (pinMode === 'unlock' && pinBuffer.length === 6) {
+    setTimeout(submitPin, 200);
+  }
+  // Auto-submit at 4 for child setup
+  if (pinMode === 'setup_child' && pinBuffer.length === 4) {
+    setTimeout(submitPin, 200);
+  }
+  // Auto-submit at 6 for parent setup
+  if (pinMode === 'setup_parent' && pinBuffer.length === 6) {
+    setTimeout(submitPin, 200);
+  }
 }
+
 function updateDots() {
   const dots = document.querySelectorAll('#pin-dots .pin-dot');
   dots.forEach((d,i) => d.classList.toggle('filled', i < pinBuffer.length));
+  // Show 4 or 6 dots depending on mode
+  const container = document.getElementById('pin-dots');
+  const needSix = (pinMode === 'setup_parent' || pinMode === 'change1' || pinMode === 'change2');
+  if (needSix && dots.length === 4) {
+    container.innerHTML = '<div class="pin-dot"></div>'.repeat(6);
+    container.querySelectorAll('.pin-dot').forEach((d,i) => d.classList.toggle('filled', i < pinBuffer.length));
+  } else if (!needSix && dots.length === 6 && pinMode !== 'unlock') {
+    container.innerHTML = '<div class="pin-dot"></div>'.repeat(4);
+    container.querySelectorAll('.pin-dot').forEach((d,i) => d.classList.toggle('filled', i < pinBuffer.length));
+  } else if (pinMode === 'unlock') {
+    // Dynamic: show as many dots as typed (up to 6)
+    const count = Math.max(4, pinBuffer.length);
+    if (dots.length !== count) {
+      container.innerHTML = '<div class="pin-dot"></div>'.repeat(count);
+      container.querySelectorAll('.pin-dot').forEach((d,i) => d.classList.toggle('filled', i < pinBuffer.length));
+    } else {
+      dots.forEach((d,i) => d.classList.toggle('filled', i < pinBuffer.length));
+    }
+  }
 }
+
 function submitPin() {
   const pin = pinBuffer;
   pinBuffer = '';
-  if (pinMode === 'setup') {
-    localStorage.setItem('pin', pin);
+
+  if (pinMode === 'setup_child') {
+    localStorage.setItem('pin_child', pin);
+    save('pin_child', pin);
+    pinMode = 'setup_parent';
+    document.getElementById('pin-subtitle').textContent = 'Create Parent PIN (6 digits)';
+    document.getElementById('pin-setup-hint').textContent = 'Parent gets full access';
+    updateDots();
+    return;
+  }
+
+  if (pinMode === 'setup_parent') {
+    localStorage.setItem('pin_parent', pin);
+    save('pin_parent', pin);
+    currentRole = 'parent';
     unlockApp();
-  } else if (pinMode === 'change1') {
+    return;
+  }
+
+  if (pinMode === 'change1') {
     newPinTemp = pin;
     pinMode = 'change2';
-    document.getElementById('pin-subtitle').textContent = 'Confirm new PIN';
+    document.getElementById('pin-subtitle').textContent = 'Confirm new Parent PIN (6 digits)';
     updateDots();
-  } else if (pinMode === 'change2') {
+    return;
+  }
+
+  if (pinMode === 'change2') {
     if (pin === newPinTemp) {
-      localStorage.setItem('pin', pin);
+      localStorage.setItem('pin_parent', pin);
+      save('pin_parent', pin);
       unlockApp();
     } else {
-      document.getElementById('pin-error').textContent = 'PINs don\'t match. Try again.';
+      document.getElementById('pin-error').textContent = 'PINs don\'t match';
       pinMode = 'change1';
-      document.getElementById('pin-subtitle').textContent = 'Enter new PIN';
+      document.getElementById('pin-subtitle').textContent = 'Enter new Parent PIN (6 digits)';
       updateDots();
     }
+    return;
+  }
+
+  // Unlock mode — check both PINs
+  if (pin === localStorage.getItem('pin_child')) {
+    currentRole = 'child';
+    unlockApp();
+  } else if (pin === localStorage.getItem('pin_parent')) {
+    currentRole = 'parent';
+    unlockApp();
   } else {
-    if (pin === localStorage.getItem('pin')) { unlockApp(); }
-    else { document.getElementById('pin-error').textContent = 'Wrong PIN'; updateDots(); setTimeout(() => document.getElementById('pin-error').textContent = '', 2000); }
+    document.getElementById('pin-error').textContent = 'Wrong PIN';
+    updateDots();
+    setTimeout(() => document.getElementById('pin-error').textContent = '', 2000);
   }
 }
+
 function unlockApp() {
   document.getElementById('pin-screen').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
   initTabHTML(); initHifdhHTML(); initFeaturesHTML(); initReportsHTML();
+  applyRole();
   renderDashboard();
 }
+
+function applyRole() {
+  // Hide parent-only menu items for child
+  const menuItems = document.querySelectorAll('.menu-item');
+  const parentOnly = ['juzmap', 'goals', 'routine', 'report'];
+  menuItems.forEach(item => {
+    const target = item.getAttribute('onclick')?.match(/navTo\('(\w+)'\)/)?.[1];
+    if (target && parentOnly.includes(target) && currentRole === 'child') {
+      item.style.display = 'none';
+    } else {
+      item.style.display = '';
+    }
+  });
+  // Show role indicator in header
+  const header = document.querySelector('header h1');
+  header.innerHTML = `<span>📖</span> Quran Tracker <span style="font-size:0.6rem;background:${currentRole==='parent'?'var(--accent)':'var(--gold)'};color:white;padding:2px 8px;border-radius:10px;vertical-align:middle;">${currentRole==='parent'?'👨‍👩‍👧 Parent':'👧 Shireen'}</span>`;
+}
+
 function lockApp() {
   pinMode = 'unlock';
   pinBuffer = '';
   document.getElementById('pin-subtitle').textContent = 'Enter PIN';
   document.getElementById('pin-error').textContent = '';
-  document.getElementById('pin-setup-hint').textContent = '';
-  updateDots();
+  document.getElementById('pin-setup-hint').textContent = '4 digits = child · 6 digits = parent';
+  document.getElementById('pin-dots').innerHTML = '<div class="pin-dot"></div>'.repeat(4);
   document.getElementById('pin-screen').classList.remove('hidden');
   document.getElementById('app').classList.add('hidden');
 }
+
 function changePin() {
   pinMode = 'change1';
   pinBuffer = '';
-  document.getElementById('pin-subtitle').textContent = 'Enter new PIN';
+  document.getElementById('pin-subtitle').textContent = 'Enter new Parent PIN (6 digits)';
   document.getElementById('pin-error').textContent = '';
   document.getElementById('pin-setup-hint').textContent = '';
   updateDots();
@@ -86,9 +182,12 @@ if (load('theme','light') === 'dark') { document.documentElement.setAttribute('d
 
 // === TABS / NAV ===
 function navTo(id) {
+  // Block child from parent-only tabs
+  const parentOnly = ['juzmap', 'goals', 'routine', 'report'];
+  if (currentRole === 'child' && parentOnly.includes(id)) return;
+
   document.querySelectorAll('.tab-content').forEach(e => e.classList.add('hidden'));
   document.getElementById(id).classList.remove('hidden');
-  // Update bottom nav active state
   document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active'));
   const navItems = document.querySelectorAll('.nav-item');
   if (id==='dashboard') navItems[0].classList.add('active');
@@ -111,4 +210,3 @@ function navTo(id) {
 function showTab(id, el) { navTo(id); }
 function openMenu() { document.getElementById('menu-overlay').classList.add('open'); }
 function closeMenu() { document.getElementById('menu-overlay').classList.remove('open'); }
-
