@@ -25,9 +25,13 @@ auth.onAuthStateChanged(user => {
   if (user && ALLOWED_EMAILS.includes(user.email.toLowerCase())) {
     currentUser = user;
     document.getElementById('signin-screen').classList.add('hidden');
-    document.getElementById('pin-screen').classList.remove('hidden');
-    initPin();
-    // Sync in background — don't block the UI
+    document.getElementById('pin-screen').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    initTabHTML(); initHifdhHTML(); initFeaturesHTML(); initReportsHTML();
+    currentRole = 'parent'; // Everyone is parent for now
+    applyRole();
+    renderDashboard();
+    // Sync in background
     migrateToFirestore().catch(() => {});
     loadFromFirestore().catch(() => {});
   } else if (user) {
