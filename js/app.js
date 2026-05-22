@@ -5,20 +5,33 @@ let newPinTemp = '';
 let currentRole = 'child'; // 'child' or 'parent'
 
 function initPin() {
+  // Allow PIN reset via URL param
+  if (window.location.search.includes('reset-pin')) {
+    localStorage.removeItem('pin'); localStorage.removeItem('pin_child'); localStorage.removeItem('pin_parent');
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+
   // Migrate old single PIN to child PIN
   const oldPin = localStorage.getItem('pin');
   if (oldPin && !localStorage.getItem('pin_child')) {
-    localStorage.setItem('pin_child', oldPin);
+    // Old pin might be JSON-wrapped (e.g. "\"1234\"")
+    let cleaned = oldPin.replace(/^"|"$/g, '');
+    localStorage.setItem('pin_child', cleaned);
   }
 
   const childPin = localStorage.getItem('pin_child');
   const parentPin = localStorage.getItem('pin_parent');
-  if (!childPin) {
+
+  // Clean any JSON wrapping from Firestore sync
+  if (childPin && childPin.startsWith('"')) localStorage.setItem('pin_child', JSON.parse(childPin));
+  if (parentPin && parentPin.startsWith('"')) localStorage.setItem('pin_parent', JSON.parse(parentPin));
+
+  if (!localStorage.getItem('pin_child')) {
     pinMode = 'setup_child';
     document.getElementById('pin-subtitle').textContent = 'Create Child PIN (4 digits)';
     document.getElementById('pin-setup-hint').textContent = 'First time setup';
     updateDots();
-  } else if (!parentPin) {
+  } else if (!localStorage.getItem('pin_parent')) {
     pinMode = 'setup_parent';
     document.getElementById('pin-subtitle').textContent = 'Create Parent PIN (6 digits)';
     document.getElementById('pin-setup-hint').textContent = 'Parent gets full access';
@@ -36,7 +49,7 @@ function pinInput(key) {
   else if (pinBuffer.length < 6) { pinBuffer += key; }
   updateDots();
   // Auto-submit at 4 digits if it matches child PIN (during unlock)
-  if (pinMode === 'unlock' && pinBuffer.length === 4 && pinBuffer === localStorage.getItem('pin_child')) {
+  if (pinMode === 'unlock' && pinBuffer.length === 4 && pinBuffer === (localStorage.getItem('pin_child')||'').replace(/^"|"$/g, '')) {
     setTimeout(submitPin, 200);
   }
   // Auto-submit at 6 digits during unlock
@@ -83,7 +96,6 @@ function submitPin() {
 
   if (pinMode === 'setup_child') {
     localStorage.setItem('pin_child', pin);
-    save('pin_child', pin);
     pinMode = 'setup_parent';
     document.getElementById('pin-subtitle').textContent = 'Create Parent PIN (6 digits)';
     document.getElementById('pin-setup-hint').textContent = 'Parent gets full access';
@@ -93,7 +105,6 @@ function submitPin() {
 
   if (pinMode === 'setup_parent') {
     localStorage.setItem('pin_parent', pin);
-    save('pin_parent', pin);
     currentRole = 'parent';
     unlockApp();
     return;
@@ -110,7 +121,6 @@ function submitPin() {
   if (pinMode === 'change2') {
     if (pin === newPinTemp) {
       localStorage.setItem('pin_parent', pin);
-      save('pin_parent', pin);
       unlockApp();
     } else {
       document.getElementById('pin-error').textContent = 'PINs don\'t match';
@@ -122,10 +132,12 @@ function submitPin() {
   }
 
   // Unlock mode — check both PINs
-  if (pin === localStorage.getItem('pin_child')) {
+  const storedChild = (localStorage.getItem('pin_child')||'').replace(/^"|"$/g, '');
+  const storedParent = (localStorage.getItem('pin_parent')||'').replace(/^"|"$/g, '');
+  if (pin === storedChild) {
     currentRole = 'child';
     unlockApp();
-  } else if (pin === localStorage.getItem('pin_parent')) {
+  } else if (pin === storedParent) {
     currentRole = 'parent';
     unlockApp();
   } else {
