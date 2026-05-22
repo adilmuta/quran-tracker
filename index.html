@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Quran Tracker & Daily Planner</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<meta name="theme-color" content="#2d6a4f">
+<style>
+:root {
+  --bg: #f8f9fa; --card: #fff; --text: #1a1a2e; --accent: #2d6a4f; --accent2: #40916c;
+  --border: #dee2e6; --muted: #6c757d; --ok: #2d6a4f; --warn: #e9c46a; --danger: #e63946;
+  --gold: #f4a261; --radius: 12px;
+}
+[data-theme="dark"] {
+  --bg: #1a1a2e; --card: #16213e; --text: #e8e8e8; --accent: #52b788; --accent2: #74c69d;
+  --border: #2a2a4a; --muted: #8d99ae; --ok: #52b788; --warn: #e9c46a; --danger: #ef476f;
+  --gold: #f4a261;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; transition: all 0.3s; }
+.container { max-width: 600px; margin: 0 auto; padding: 16px; }
+header { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; margin-bottom: 16px; }
+header h1 { font-size: 1.4rem; }
+header h1 span { font-size: 1.6rem; }
+.theme-toggle { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 6px 12px; cursor: pointer; font-size: 1.1rem; }
+
+/* Tabs */
+.tabs { display: flex; gap: 4px; margin-bottom: 16px; background: var(--card); border-radius: var(--radius); padding: 4px; border: 1px solid var(--border); }
+.tab { flex: 1; padding: 10px 8px; text-align: center; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: all 0.2s; }
+.tab.active { background: var(--accent); color: white; }
+.tab:not(.active):hover { background: var(--border); }
+
+/* Cards */
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
+.card h3 { font-size: 1rem; margin-bottom: 10px; color: var(--accent); }
+
+/* Progress */
+.progress-bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin: 8px 0; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 4px; transition: width 0.4s; }
+.stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.stat { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; flex: 1; min-width: 100px; text-align: center; }
+.stat .num { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
+.stat .label { font-size: 0.75rem; color: var(--muted); }
+
+/* Checklist */
+.check-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.check-item:last-child { border-bottom: none; }
+.check-item input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); cursor: pointer; }
+.check-item label { flex: 1; cursor: pointer; font-size: 0.9rem; }
+.check-item.done label { text-decoration: line-through; color: var(--muted); }
+.check-item .time { font-size: 0.75rem; color: var(--muted); min-width: 50px; }
+
+/* Surah grid */
+.surah-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.surah-item { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 8px; border: 1px solid var(--border); font-size: 0.85rem; }
+.surah-item.complete { background: var(--ok); color: white; border-color: var(--ok); }
+.surah-item input { width: 16px; height: 16px; accent-color: var(--ok); }
+
+/* Daily planner */
+.time-block { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
+.time-block:last-child { border-bottom: none; }
+.time-label { min-width: 55px; font-size: 0.75rem; font-weight: 600; color: var(--accent); padding-top: 2px; }
+.time-content { flex: 1; }
+.time-content input { width: 100%; background: transparent; border: none; border-bottom: 1px dashed var(--border); padding: 4px 0; font-size: 0.9rem; color: var(--text); outline: none; }
+.time-content input:focus { border-color: var(--accent); }
+
+/* Streak */
+.streak { display: flex; align-items: center; gap: 8px; padding: 12px; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: white; border-radius: var(--radius); margin-bottom: 16px; }
+.streak .fire { font-size: 1.5rem; }
+.streak .count { font-size: 1.3rem; font-weight: 700; }
+.streak .text { font-size: 0.85rem; opacity: 0.9; }
+
+/* Day nav */
+.day-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.day-nav button { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; cursor: pointer; font-size: 1rem; color: var(--text); }
+.day-nav .date { font-weight: 600; font-size: 0.95rem; }
+
+/* Exam countdown */
+.countdown { text-align: center; padding: 16px; background: linear-gradient(135deg, var(--gold), var(--danger)); color: white; border-radius: var(--radius); margin-bottom: 16px; }
+.countdown .days { font-size: 2.5rem; font-weight: 800; }
+.countdown .label { font-size: 0.85rem; opacity: 0.9; }
+
+/* Section */
+.section-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 16px 0 8px; font-weight: 600; }
+
+/* Routine template */
+.routine-editor { margin-top: 12px; }
+.routine-editor input { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 0.9rem; margin-bottom: 8px; }
+.btn { padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 500; }
+.btn-primary { background: var(--accent); color: white; }
+.btn-sm { padding: 5px 10px; font-size: 0.8rem; }
+.btn-danger { background: var(--danger); color: white; }
+
+.hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1><span>📖</span> Quran Tracker</h1>
+    <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
+  </header>
+
+  <div class="tabs">
+    <div class="tab active" onclick="showTab('dashboard')">🏠 Home</div>
+    <div class="tab" onclick="showTab('quran')">📖 Quran</div>
+    <div class="tab" onclick="showTab('planner')">📅 Planner</div>
+    <div class="tab" onclick="showTab('routine')">⚙️ Routine</div>
+  </div>
+
+  <div id="dashboard" class="tab-content">
+    <div class="countdown" id="countdown"></div>
+    <div class="streak" id="streak"></div>
+    <div class="stats" id="stats"></div>
+    <div class="card">
+      <h3>📋 Today's Tasks</h3>
+      <div id="today-summary"></div>
+    </div>
+  </div>
+
+  <div id="quran" class="tab-content hidden">
+    <div class="card">
+      <h3>📊 Overall Progress</h3>
+      <div id="quran-progress"></div>
+    </div>
+    <div class="section-title">Juz 28 — Al-Mujadila to At-Tahrim</div>
+    <div class="card"><div class="surah-grid" id="juz28"></div></div>
+    <div class="section-title">Juz 27 — Adh-Dhariyat to Al-Hadid</div>
+    <div class="card"><div class="surah-grid" id="juz27"></div></div>
+    <div class="section-title">Juz 26 — Al-Ahqaf to Adh-Dhariyat</div>
+    <div class="card"><div class="surah-grid" id="juz26"></div></div>
+  </div>
+
+  <div id="planner" class="tab-content hidden">
+    <div class="day-nav">
+      <button onclick="changeDay(-1)">◀</button>
+      <span class="date" id="planner-date"></span>
+      <button onclick="changeDay(1)">▶</button>
+    </div>
+    <div class="card" id="planner-tasks"></div>
+  </div>
+
+  <div id="routine" class="tab-content hidden">
+    <div class="card">
+      <h3>⚙️ Daily Routine Template</h3>
+      <p style="font-size:0.8rem;color:var(--muted);margin-bottom:12px;">Set your kid's default daily schedule. This generates tasks each day.</p>
+      <div id="routine-list"></div>
+      <div class="routine-editor">
+        <input id="new-time" type="time" placeholder="Time">
+        <input id="new-task" type="text" placeholder="Task (e.g. Quran revision - Juz 28)">
+        <button class="btn btn-primary" onclick="addRoutineItem()">+ Add</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>🗑️ Reset</h3>
+      <button class="btn btn-danger" onclick="if(confirm('Reset ALL data?')){localStorage.clear();location.reload();}">Reset All Data</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SURAHS = {
+  juz28: [{n:58,name:"Al-Mujadila"},{n:59,name:"Al-Hashr"},{n:60,name:"Al-Mumtahina"},{n:61,name:"As-Saff"},{n:62,name:"Al-Jumu'ah"},{n:63,name:"Al-Munafiqun"},{n:64,name:"At-Taghabun"},{n:65,name:"At-Talaq"},{n:66,name:"At-Tahrim"}],
+  juz27: [{n:51,name:"Adh-Dhariyat"},{n:52,name:"At-Tur"},{n:53,name:"An-Najm"},{n:54,name:"Al-Qamar"},{n:55,name:"Ar-Rahman"},{n:56,name:"Al-Waqi'ah"},{n:57,name:"Al-Hadid"}],
+  juz26: [{n:46,name:"Al-Ahqaf"},{n:47,name:"Muhammad"},{n:48,name:"Al-Fath"},{n:49,name:"Al-Hujurat"},{n:50,name:"Qaf"},{n:51,name:"Adh-Dhariyat (1-30)"}]
+};
+const EXAM_DATE = new Date('2026-06-02');
+const DEFAULT_ROUTINE = [
+  {time:"06:00",task:"Fajr & Morning Adhkar"},
+  {time:"06:30",task:"Quran Revision (Morning Session - 45 min)"},
+  {time:"07:30",task:"Breakfast"},
+  {time:"08:00",task:"Free play / Outdoor"},
+  {time:"10:00",task:"Study / Homework"},
+  {time:"12:00",task:"Dhuhr & Lunch"},
+  {time:"13:00",task:"Quran Revision (Afternoon Session - 30 min)"},
+  {time:"14:00",task:"Rest / Nap"},
+  {time:"15:30",task:"Asr & Snack"},
+  {time:"16:00",task:"Play / Activity"},
+  {time:"18:00",task:"Maghrib & Dinner"},
+  {time:"19:00",task:"Quran Revision (Evening - 20 min)"},
+  {time:"19:30",task:"Family time / Reading"},
+  {time:"20:30",task:"Isha & Bedtime routine"},
+  {time:"21:00",task:"Sleep 😴"}
+];
+
+// State
+let currentDay = new Date();
+currentDay.setHours(0,0,0,0);
+
+function load(key, def) { try { return JSON.parse(localStorage.getItem(key)) || def; } catch { return def; } }
+function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+
+function dateKey(d) { return d.toISOString().split('T')[0]; }
+function today() { const d = new Date(); d.setHours(0,0,0,0); return d; }
+
+// Theme
+function toggleTheme() {
+  const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.documentElement.setAttribute('data-theme', dark ? '' : 'dark');
+  document.querySelector('.theme-toggle').textContent = dark ? '🌙' : '☀️';
+  save('theme', dark ? 'light' : 'dark');
+}
+if (load('theme','light') === 'dark') { document.documentElement.setAttribute('data-theme','dark'); document.querySelector('.theme-toggle').textContent = '☀️'; }
+
+// Tabs
+function showTab(id) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  event.target.classList.add('active');
+  if (id === 'dashboard') renderDashboard();
+  if (id === 'quran') renderQuran();
+  if (id === 'planner') renderPlanner();
+  if (id === 'routine') renderRoutine();
+}
+
+// Quran tracker
+function renderQuran() {
+  let total = 0, done = 0;
+  ['juz28','juz27','juz26'].forEach(juz => {
+    const el = document.getElementById(juz);
+    const progress = load('surah_' + juz, {});
+    el.innerHTML = SURAHS[juz].map(s => {
+      total++;
+      const checked = progress[s.n] || false;
+      if (checked) done++;
+      return `<div class="surah-item ${checked?'complete':''}">
+        <input type="checkbox" ${checked?'checked':''} onchange="toggleSurah('${juz}',${s.n},this.checked)">
+        <span>${s.n}. ${s.name}</span>
+      </div>`;
+    }).join('');
+  });
+  const pct = total ? Math.round(done/total*100) : 0;
+  document.getElementById('quran-progress').innerHTML = `
+    <div style="display:flex;justify-content:space-between;font-size:0.85rem;"><span>${done}/${total} surahs confident</span><span>${pct}%</span></div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>`;
+}
+function toggleSurah(juz, n, checked) {
+  const progress = load('surah_' + juz, {});
+  progress[n] = checked;
+  save('surah_' + juz, progress);
+  renderQuran();
+}
+
+// Planner
+function getRoutine() { return load('routine', DEFAULT_ROUTINE); }
+function getDayTasks(d) {
+  const key = 'tasks_' + dateKey(d);
+  let tasks = load(key, null);
+  if (!tasks) { tasks = getRoutine().map(r => ({...r, done: false})); save(key, tasks); }
+  return tasks;
+}
+function renderPlanner() {
+  const d = currentDay;
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('planner-date').textContent = `${days[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()}`;
+  const tasks = getDayTasks(d);
+  const key = 'tasks_' + dateKey(d);
+  document.getElementById('planner-tasks').innerHTML = `<h3>📋 Schedule</h3>` + tasks.map((t,i) => `
+    <div class="check-item ${t.done?'done':''}">
+      <input type="checkbox" ${t.done?'checked':''} onchange="toggleTask(${i},this.checked)">
+      <span class="time">${t.time}</span>
+      <label>${t.task}</label>
+    </div>`).join('');
+}
+function toggleTask(i, checked) {
+  const key = 'tasks_' + dateKey(currentDay);
+  const tasks = load(key, []);
+  tasks[i].done = checked;
+  save(key, tasks);
+  updateStreak();
+  renderPlanner();
+}
+function changeDay(delta) { currentDay.setDate(currentDay.getDate() + delta); renderPlanner(); }
+
+// Routine editor
+function renderRoutine() {
+  const routine = getRoutine();
+  document.getElementById('routine-list').innerHTML = routine.map((r,i) => `
+    <div class="time-block">
+      <span class="time-label">${r.time}</span>
+      <div class="time-content" style="display:flex;align-items:center;gap:8px;">
+        <span style="flex:1;font-size:0.9rem;">${r.task}</span>
+        <button class="btn btn-sm btn-danger" onclick="removeRoutineItem(${i})">✕</button>
+      </div>
+    </div>`).join('');
+}
+function addRoutineItem() {
+  const time = document.getElementById('new-time').value;
+  const task = document.getElementById('new-task').value.trim();
+  if (!time || !task) return;
+  const routine = getRoutine();
+  routine.push({time, task});
+  routine.sort((a,b) => a.time.localeCompare(b.time));
+  save('routine', routine);
+  document.getElementById('new-time').value = '';
+  document.getElementById('new-task').value = '';
+  renderRoutine();
+}
+function removeRoutineItem(i) {
+  const routine = getRoutine();
+  routine.splice(i, 1);
+  save('routine', routine);
+  renderRoutine();
+}
+
+// Streak
+function updateStreak() {
+  let streak = 0;
+  let d = new Date(today());
+  // Check if today is complete
+  const todayTasks = load('tasks_' + dateKey(d), null);
+  if (todayTasks && todayTasks.length > 0 && todayTasks.every(t => t.done)) {
+    streak = 1;
+    d.setDate(d.getDate() - 1);
+  } else {
+    d.setDate(d.getDate() - 1);
+  }
+  // Count backwards
+  for (let i = 0; i < 365; i++) {
+    const tasks = load('tasks_' + dateKey(d), null);
+    if (tasks && tasks.length > 0 && tasks.every(t => t.done)) { streak++; d.setDate(d.getDate()-1); }
+    else break;
+  }
+  save('streak', streak);
+}
+
+// Dashboard
+function renderDashboard() {
+  // Countdown
+  const daysLeft = Math.max(0, Math.ceil((EXAM_DATE - today()) / 86400000));
+  document.getElementById('countdown').innerHTML = daysLeft > 0
+    ? `<div class="days">${daysLeft}</div><div class="label">days until exam (June 2)</div>`
+    : `<div class="days">🎯</div><div class="label">Exam day! بالتوفيق إن شاء الله</div>`;
+
+  // Streak
+  updateStreak();
+  const streak = load('streak', 0);
+  document.getElementById('streak').innerHTML = `<span class="fire">🔥</span><span class="count">${streak}</span><span class="text">day streak</span>`;
+
+  // Stats
+  let totalSurahs = 0, doneSurahs = 0;
+  ['juz28','juz27','juz26'].forEach(juz => {
+    const progress = load('surah_' + juz, {});
+    SURAHS[juz].forEach(s => { totalSurahs++; if(progress[s.n]) doneSurahs++; });
+  });
+  const todayTasks = getDayTasks(today());
+  const todayDone = todayTasks.filter(t => t.done).length;
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="num">${doneSurahs}/${totalSurahs}</div><div class="label">Surahs Done</div></div>
+    <div class="stat"><div class="num">${todayDone}/${todayTasks.length}</div><div class="label">Today's Tasks</div></div>
+    <div class="stat"><div class="num">${Math.round(doneSurahs/totalSurahs*100)}%</div><div class="label">Quran Progress</div></div>`;
+
+  // Today summary
+  const pending = todayTasks.filter(t => !t.done);
+  document.getElementById('today-summary').innerHTML = pending.length === 0
+    ? `<p style="color:var(--ok);font-weight:600;">✅ All done for today! MashaAllah!</p>`
+    : pending.slice(0,5).map(t => `<div class="check-item"><span class="time">${t.time}</span><label>${t.task}</label></div>`).join('')
+      + (pending.length > 5 ? `<p style="font-size:0.8rem;color:var(--muted);margin-top:8px;">+${pending.length-5} more...</p>` : '');
+}
+
+// Init
+renderDashboard();
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+</script>
+</body>
+</html>
