@@ -1,0 +1,202 @@
+// Tab HTML setup
+function initTabHTML() {
+  document.getElementById('dashboard').innerHTML = '<div class="countdown" id="countdown"></div><div class="streak" id="streak"></div><div class="stats" id="stats"></div><div class="card"><h3>📋 Next Up</h3><div id="today-summary"></div></div>';
+  document.getElementById('quran').innerHTML = '<div class="card"><h3>📊 Progress</h3><div id="quran-progress"></div></div><div class="section-title">Juz 28</div><div class="card"><div class="surah-grid" id="juz28"></div></div><div class="section-title">Juz 27</div><div class="card"><div class="surah-grid" id="juz27"></div></div><div class="section-title">Juz 26</div><div class="card"><div class="surah-grid" id="juz26"></div></div>';
+  document.getElementById('planner').innerHTML = '<div class="day-nav"><button onclick="changeDay(-1)">◀</button><span class="date" id="planner-date"></span><button onclick="changeDay(1)">▶</button></div><div class="card" id="planner-tasks"></div>';
+  document.getElementById('rewards').innerHTML = '<div class="card"><div class="rewards-header"><h3>⭐ Stars Earned</h3><div class="stars-display">⭐ <span id="star-count">0</span></div></div><p style="font-size:0.8rem;color:var(--muted);">Earn stars by completing tasks & surahs.</p><div style="margin-top:12px;font-size:0.85rem;"><div>✅ Task = <b>1⭐</b></div><div>📖 Surah = <b>3⭐</b></div><div>🔥 All tasks = <b>5⭐</b></div><div>📅 7-day streak = <b>20⭐</b></div></div></div><div class="card"><h3>🎁 Rewards Shop</h3><div id="rewards-shop"></div></div><div class="card"><h3>📜 History</h3><div class="reward-log" id="reward-log"></div></div><div class="card"><h3>➕ Add Custom Reward</h3><div class="routine-editor"><input id="new-reward-name" placeholder="Reward name"><input id="new-reward-cost" type="number" placeholder="Star cost"><button class="btn btn-gold" onclick="addReward()">Add Reward</button></div></div>';
+  document.getElementById('routine').innerHTML = '<div class="card"><h3>⚙️ Daily Routine</h3><p style="font-size:0.8rem;color:var(--muted);margin-bottom:12px;">Default schedule generated each day.</p><div id="routine-list"></div><div class="routine-editor"><input id="new-time" type="time"><input id="new-task" type="text" placeholder="Task name"><button class="btn btn-primary" onclick="addRoutineItem()">+ Add</button></div></div><div class="card"><h3>🔐 Change PIN</h3><button class="btn btn-primary" onclick="changePin()">Change PIN</button></div><div class="card"><h3>🗑️ Reset All Data</h3><button class="btn btn-danger" onclick="if(confirm(\'Reset ALL data?\')){localStorage.clear();location.reload();}">Reset</button></div>';
+}
+
+// === STARS ===
+function getStars() { return load('stars', 0); }
+function addStars(n, reason) {
+  const s = getStars() + n;
+  save('stars', s);
+  const log = load('star_log', []);
+  log.unshift({n, reason, date: new Date().toISOString()});
+  if (log.length > 50) log.length = 50;
+  save('star_log', log);
+  if (n > 0) celebrate();
+}
+function celebrate() {
+  const el = document.createElement('div');
+  el.className = 'celebration';
+  el.textContent = '⭐';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 700);
+}
+
+// === QURAN ===
+function renderQuran() {
+  let total = 0, done = 0;
+  ['juz28','juz27','juz26'].forEach(juz => {
+    const el = document.getElementById(juz);
+    const progress = load('surah_' + juz, {});
+    el.innerHTML = SURAHS[juz].map(s => {
+      total++;
+      const checked = progress[s.n] || false;
+      if (checked) done++;
+      return `<div class="surah-item ${checked?'complete':''}">
+        <input type="checkbox" ${checked?'checked':''} onchange="toggleSurah('${juz}',${s.n},this.checked)">
+        <span>${s.n}. ${s.name}</span></div>`;
+    }).join('');
+  });
+  const pct = total ? Math.round(done/total*100) : 0;
+  document.getElementById('quran-progress').innerHTML = `
+    <div style="display:flex;justify-content:space-between;font-size:0.85rem;"><span>${done}/${total} surahs</span><span>${pct}%</span></div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>`;
+}
+function toggleSurah(juz, n, checked) {
+  const progress = load('surah_' + juz, {});
+  const wasChecked = progress[n] || false;
+  progress[n] = checked;
+  save('surah_' + juz, progress);
+  if (checked && !wasChecked) addStars(3, `Surah ${n} marked confident`);
+  renderQuran();
+}
+
+// === PLANNER ===
+function getRoutine() { return load('routine', DEFAULT_ROUTINE); }
+function getDayTasks(d) {
+  const key = 'tasks_' + dateKey(d);
+  let tasks = load(key, null);
+  if (!tasks) { tasks = getRoutine().map(r => ({...r, done: false})); save(key, tasks); }
+  return tasks;
+}
+function renderPlanner() {
+  const d = currentDay;
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('planner-date').textContent = `${days[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()}`;
+  const tasks = getDayTasks(d);
+  document.getElementById('planner-tasks').innerHTML = `<h3>📋 Schedule</h3>` + tasks.map((t,i) => `
+    <div class="check-item ${t.done?'done':''}">
+      <input type="checkbox" ${t.done?'checked':''} onchange="toggleTask(${i},this.checked)">
+      <span class="time">${t.time}</span>
+      <label>${t.task}</label>
+    </div>`).join('');
+}
+function toggleTask(i, checked) {
+  const key = 'tasks_' + dateKey(currentDay);
+  const tasks = load(key, []);
+  const wasDone = tasks[i].done;
+  tasks[i].done = checked;
+  save(key, tasks);
+  if (checked && !wasDone) {
+    addStars(1, tasks[i].task);
+    // Check if all done
+    if (tasks.every(t => t.done)) addStars(5, 'All daily tasks complete! 🎉');
+  }
+  updateStreak();
+  renderPlanner();
+}
+function changeDay(delta) { currentDay.setDate(currentDay.getDate() + delta); renderPlanner(); }
+
+// === ROUTINE ===
+function renderRoutine() {
+  const routine = getRoutine();
+  document.getElementById('routine-list').innerHTML = routine.map((r,i) => `
+    <div class="time-block">
+      <span class="time-label">${r.time}</span>
+      <span style="flex:1;font-size:0.9rem;">${r.task}</span>
+      <button class="btn btn-sm btn-danger" onclick="removeRoutineItem(${i})">✕</button>
+    </div>`).join('');
+}
+function addRoutineItem() {
+  const time = document.getElementById('new-time').value;
+  const task = document.getElementById('new-task').value.trim();
+  if (!time || !task) return;
+  const routine = getRoutine();
+  routine.push({time, task});
+  routine.sort((a,b) => a.time.localeCompare(b.time));
+  save('routine', routine);
+  document.getElementById('new-time').value = '';
+  document.getElementById('new-task').value = '';
+  renderRoutine();
+}
+function removeRoutineItem(i) { const r = getRoutine(); r.splice(i,1); save('routine',r); renderRoutine(); }
+
+// === REWARDS ===
+function getRewardsShop() { return load('rewards_shop', DEFAULT_REWARDS); }
+function renderRewards() {
+  document.getElementById('star-count').textContent = getStars();
+  const shop = getRewardsShop();
+  const stars = getStars();
+  document.getElementById('rewards-shop').innerHTML = shop.map((r,i) => `
+    <div class="reward-item">
+      <span class="name">${r.name}</span>
+      <span class="cost">${r.cost} ⭐</span>
+      <button ${stars < r.cost ? 'disabled' : ''} onclick="redeemReward(${i})">Redeem</button>
+    </div>`).join('');
+  const log = load('star_log', []);
+  document.getElementById('reward-log').innerHTML = log.slice(0,20).map(l => {
+    const d = new Date(l.date);
+    return `<div>${l.n > 0 ? '+' : ''}${l.n} ⭐ ${l.reason} <span style="float:right;color:var(--muted)">${d.toLocaleDateString()}</span></div>`;
+  }).join('') || '<div>No activity yet</div>';
+}
+function redeemReward(i) {
+  const shop = getRewardsShop();
+  const r = shop[i];
+  if (getStars() < r.cost) return;
+  if (!confirm(`Redeem "${r.name}" for ${r.cost} ⭐?`)) return;
+  addStars(-r.cost, `Redeemed: ${r.name}`);
+  renderRewards();
+}
+function addReward() {
+  const name = document.getElementById('new-reward-name').value.trim();
+  const cost = parseInt(document.getElementById('new-reward-cost').value);
+  if (!name || !cost) return;
+  const shop = getRewardsShop();
+  shop.push({name, cost});
+  shop.sort((a,b) => a.cost - b.cost);
+  save('rewards_shop', shop);
+  document.getElementById('new-reward-name').value = '';
+  document.getElementById('new-reward-cost').value = '';
+  renderRewards();
+}
+
+// === STREAK ===
+function updateStreak() {
+  let streak = 0;
+  let d = new Date(today());
+  const todayTasks = load('tasks_' + dateKey(d), null);
+  if (todayTasks && todayTasks.length > 0 && todayTasks.every(t => t.done)) {
+    streak = 1; d.setDate(d.getDate()-1);
+  } else { d.setDate(d.getDate()-1); }
+  for (let i = 0; i < 365; i++) {
+    const tasks = load('tasks_' + dateKey(d), null);
+    if (tasks && tasks.length > 0 && tasks.every(t => t.done)) { streak++; d.setDate(d.getDate()-1); }
+    else break;
+  }
+  // 7-day streak bonus (award once per streak milestone)
+  const lastStreakBonus = load('last_streak_bonus', 0);
+  if (streak >= 7 && streak - lastStreakBonus >= 7) {
+    addStars(20, `🔥 ${streak}-day streak bonus!`);
+    save('last_streak_bonus', streak);
+  }
+  save('streak', streak);
+}
+
+// === DASHBOARD ===
+function renderDashboard() {
+  const daysLeft = Math.max(0, Math.ceil((EXAM_DATE - today()) / 86400000));
+  document.getElementById('countdown').innerHTML = daysLeft > 0
+    ? `<div class="days">${daysLeft}</div><div class="label">days until exam</div>`
+    : `<div class="days">🎯</div><div class="label">Exam time! بالتوفيق</div>`;
+  updateStreak();
+  const streak = load('streak', 0);
+  document.getElementById('streak').innerHTML = `<span class="fire">🔥</span><span class="count">${streak}</span><span>day streak</span><span style="margin-left:auto;">⭐ ${getStars()}</span>`;
+  let totalS = 0, doneS = 0;
+  ['juz28','juz27','juz26'].forEach(juz => { const p = load('surah_'+juz,{}); SURAHS[juz].forEach(s => { totalS++; if(p[s.n]) doneS++; }); });
+  const todayTasks = getDayTasks(today());
+  const todayDone = todayTasks.filter(t => t.done).length;
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="num">${doneS}/${totalS}</div><div class="label">Surahs</div></div>
+    <div class="stat"><div class="num">${todayDone}/${todayTasks.length}</div><div class="label">Today</div></div>
+    <div class="stat"><div class="num">${Math.round(doneS/totalS*100)}%</div><div class="label">Quran</div></div>`;
+  const pending = todayTasks.filter(t => !t.done);
+  document.getElementById('today-summary').innerHTML = pending.length === 0
+    ? `<p style="color:var(--ok);font-weight:600;">✅ All done! MashaAllah!</p>`
+    : pending.slice(0,4).map(t => `<div class="check-item"><span class="time">${t.time}</span><label>${t.task}</label></div>`).join('');
+}
+
