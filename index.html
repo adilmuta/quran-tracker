@@ -197,7 +197,7 @@ header h1 { font-size: 1.4rem; }
   <div class="bottom-nav">
     <div class="nav-item active" onclick="navTo('dashboard')"><span class="icon">🏠</span>Home</div>
     <div class="nav-item" onclick="navTo('hifdh')"><span class="icon">🕌</span>Hifdh</div>
-    <div class="nav-item" onclick="navTo('planner')"><span class="icon">📅</span>Planner</div>
+    <div class="nav-item" onclick="navTo('rewards')"><span class="icon">⭐</span>Rewards</div>
     <div class="nav-item" onclick="openMenu()"><span class="icon">☰</span>More</div>
   </div>
 
@@ -443,7 +443,7 @@ function navTo(id) {
   const navItems = document.querySelectorAll('.nav-item');
   if (id==='dashboard') navItems[0].classList.add('active');
   else if (id==='hifdh') navItems[1].classList.add('active');
-  else if (id==='planner') navItems[2].classList.add('active');
+  else if (id==='rewards') navItems[2].classList.add('active');
   closeMenu();
   if (id==='dashboard') renderDashboard();
   if (id==='hifdh') renderHifdh();
