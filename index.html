@@ -703,7 +703,8 @@ function getHifdhLog(d) { return load('hifdh_' + dateKey(d), {sabaq:{surah:'',fr
 function saveHifdhLog(d, data) { save('hifdh_' + dateKey(d), data); }
 
 function hifdhFieldHTML(id, label, tag, log) {
-  const field = log[id] || {surah:'',from:'',to:''};
+  const field = log[id] || {surah:'',from:'',to:'',status:'',missed_reason:''};
+  const status = field.status || '';
   return `<div class="hifdh-field">
     <label>${label} ${tag ? `<span class="teacher-tag">${tag}</span>` : ''}</label>
     <div style="display:flex;gap:6px;align-items:center;">
@@ -714,6 +715,12 @@ function hifdhFieldHTML(id, label, tag, log) {
       <span style="color:var(--muted);">–</span>
       <input style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem;" type="number" min="1" placeholder="To" value="${field.to}" onchange="updateHifdhField('${id}','to',this.value)">
     </div>
+    <div style="display:flex;gap:6px;margin-top:6px;">
+      <button class="btn btn-sm ${status==='complete'?'btn-primary':''}" style="flex:1;border:1px solid var(--border);${status==='complete'?'':'background:var(--bg);color:var(--text);'}" onclick="updateHifdhField('${id}','status','complete');renderHifdh();">✅ Complete</button>
+      <button class="btn btn-sm ${status==='repeat'?'btn-primary':''}" style="flex:1;border:1px solid var(--border);${status==='repeat'?'':'background:var(--bg);color:var(--text);'}" onclick="updateHifdhField('${id}','status','repeat');renderHifdh();">🔁 Repeat</button>
+      <button class="btn btn-sm ${status==='missed'?'btn-danger':''}" style="flex:1;border:1px solid var(--border);${status==='missed'?'':'background:var(--bg);color:var(--text);'}" onclick="updateHifdhField('${id}','status','missed');renderHifdh();">❌ Missed</button>
+    </div>
+    ${status==='missed' ? `<input style="width:100%;padding:8px;border:1px solid var(--danger);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem;margin-top:6px;" placeholder="Why was it missed?" value="${esc(field.missed_reason||'')}" onchange="updateHifdhField('${id}','missed_reason',this.value)">` : ''}
   </div>`;
 }
 
@@ -734,8 +741,12 @@ function renderHifdh() {
     hifdhFieldHTML('manzil','📙 Manzil (Older Revision)','Sr. Amany',log) +
     hifdhFieldHTML('online','💻 Online Ustad','',log) +
     `<div class="hifdh-field">
-      <label>📝 Notes / Mistakes</label>
-      <textarea onchange="updateHifdh('notes',this.value)" placeholder="Ustad feedback, ayahs to repeat...">${esc(log.notes)}</textarea>
+      <label>👩‍🏫 Sr. Amany's Feedback</label>
+      <textarea onchange="updateHifdh('feedback',this.value)" placeholder="What did the teacher say? Any corrections, praise, or areas to improve...">${esc(log.feedback||'')}</textarea>
+    </div>
+    <div class="hifdh-field">
+      <label>📝 Shireen's Notes</label>
+      <textarea onchange="updateHifdh('notes',this.value)" placeholder="Anything else to remember...">${esc(log.notes)}</textarea>
     </div>`;
 
   // History
@@ -752,7 +763,9 @@ function renderHifdh() {
     if (!f || !f.surah) return '';
     const s = ALL_SURAHS.find(x => x.n == f.surah);
     const name = s ? s.name : `Surah ${f.surah}`;
-    return f.from ? `${name} ${f.from}${f.to ? '-'+f.to : ''}` : name;
+    const range = f.from ? ` ${f.from}${f.to ? '-'+f.to : ''}` : '';
+    const badge = f.status === 'complete' ? ' ✅' : f.status === 'repeat' ? ' 🔁' : f.status === 'missed' ? ' ❌' : '';
+    return `${name}${range}${badge}`;
   }
   document.getElementById('hifdh-history').innerHTML = history.length === 0
     ? '<p style="color:var(--muted)">No logs yet. Start filling in today!</p>'
@@ -762,6 +775,7 @@ function renderHifdh() {
         ${fmtField(h.sabqi) ? `<div class="detail">📘 Sabqi: ${fmtField(h.sabqi)}</div>` : ''}
         ${fmtField(h.manzil) ? `<div class="detail">📙 Manzil: ${fmtField(h.manzil)}</div>` : ''}
         ${fmtField(h.online) ? `<div class="detail">💻 Online: ${fmtField(h.online)}</div>` : ''}
+        ${h.feedback ? `<div class="detail">👩‍🏫 ${h.feedback}</div>` : ''}
         ${h.notes ? `<div class="detail">📝 ${h.notes}</div>` : ''}
       </div>`).join('');
 }
@@ -822,6 +836,13 @@ function renderReport() {
     }
   }
 
+  // Count statuses
+  const countStatus = (arr, s) => arr.filter(x => x.status === s).length;
+  const allEntries = [...allSabaqs, ...allSabqis, ...allManzils, ...allOnline];
+  const completes = countStatus(allEntries, 'complete');
+  const repeats = countStatus(allEntries, 'repeat');
+  const missed = countStatus(allEntries, 'missed');
+
   const taskPct = totalTasks ? Math.round(completedTasks/totalTasks*100) : 0;
 
   // Summary card
@@ -833,9 +854,9 @@ function renderReport() {
       <div class="stat"><div class="num">${taskPct}%</div><div class="label">Tasks Done</div></div>
     </div>
     <div style="font-size:0.85rem;margin-top:8px;">
-      <div>✅ ${completedTasks}/${totalTasks} total tasks completed</div>
-      <div>🌟 ${perfectDays} days with ALL tasks done</div>
+      <div>✅ ${completes} complete · 🔁 ${repeats} repeat · ❌ ${missed} missed</div>
       <div>📖 ${hifdhDays} days with Quran logged</div>
+      <div>🌟 ${perfectDays} days with ALL tasks done</div>
     </div>`;
 
   // Hifdh summary
