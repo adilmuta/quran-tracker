@@ -864,7 +864,9 @@ function renderHifdh() {
     hifdhFieldHTML('sabaq','📗 Sabaq (New Lesson)','Sr. Amany',log) +
     hifdhFieldHTML('sabqi','📘 Sabqi (Recent Revision)','Sr. Amany',log) +
     hifdhFieldHTML('manzil','📙 Manzil (Older Revision)','Sr. Amany',log) +
-    hifdhFieldHTML('online','💻 Online Ustad','',log) +
+    hifdhFieldHTML('online','💻 Sabaq (New)','Hazrat Online',log) +
+    hifdhFieldHTML('online_sabqi','💻 Sabqi (Revision)','Hazrat Online',log) +
+    hifdhFieldHTML('online_manzil','💻 Manzil (Old)','Hazrat Online',log) +
     `<div class="hifdh-field">
       <label>👩‍🏫 Sr. Amany's Feedback</label>
       <textarea onchange="updateHifdh('feedback',this.value)" placeholder="What did the teacher say? Any corrections, praise, or areas to improve...">${esc(log.feedback||'')}</textarea>
@@ -889,7 +891,7 @@ function renderHifdh() {
   for (let i = 0; i < 7; i++) {
     if (i > 0) d.setDate(d.getDate() - 1);
     const l = load('hifdh_' + dateKey(d), null);
-    if (l && (l.sabaq?.surah || l.sabqi?.surah || l.manzil?.surah || l.online?.surah || l.sabaq?.length > 0)) {
+    if (l && (l.sabaq?.surah || l.sabqi?.surah || l.manzil?.surah || l.online?.surah || l.online_sabqi?.surah || l.online_manzil?.surah)) {
       history.push({date: new Date(d), ...l});
     }
   }
@@ -908,7 +910,9 @@ function renderHifdh() {
         ${fmtField(h.sabaq) ? `<div class="detail">📗 Sabaq: ${fmtField(h.sabaq)}</div>` : ''}
         ${fmtField(h.sabqi) ? `<div class="detail">📘 Sabqi: ${fmtField(h.sabqi)}</div>` : ''}
         ${fmtField(h.manzil) ? `<div class="detail">📙 Manzil: ${fmtField(h.manzil)}</div>` : ''}
-        ${fmtField(h.online) ? `<div class="detail">💻 Online: ${fmtField(h.online)}</div>` : ''}
+        ${fmtField(h.online) ? `<div class="detail">💻 Sabaq: ${fmtField(h.online)}</div>` : ''}
+        ${fmtField(h.online_sabqi) ? `<div class="detail">💻 Sabqi: ${fmtField(h.online_sabqi)}</div>` : ''}
+        ${fmtField(h.online_manzil) ? `<div class="detail">💻 Manzil: ${fmtField(h.online_manzil)}</div>` : ''}
         ${h.feedback ? `<div class="detail">👩‍🏫 ${h.feedback}</div>` : ''}
         ${h.notes ? `<div class="detail">📝 ${h.notes}</div>` : ''}
       </div>`).join('');
