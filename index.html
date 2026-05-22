@@ -348,17 +348,19 @@ function googleSignIn() {
 }
 
 auth.onAuthStateChanged(user => {
-  if (user && ALLOWED_EMAILS.includes(user.email)) {
+  if (user && ALLOWED_EMAILS.includes(user.email.toLowerCase())) {
     currentUser = user;
     document.getElementById('signin-screen').classList.add('hidden');
+    document.getElementById('pin-screen').classList.remove('hidden');
     // Migrate localStorage to Firestore on first sign-in
     migrateToFirestore().then(() => {
-      initPin();
-      loadFromFirestore();
+      loadFromFirestore().then(() => {
+        initPin();
+      });
     });
   } else if (user) {
     auth.signOut();
-    document.getElementById('signin-error').textContent = 'Access denied. Email not authorized.';
+    document.getElementById('signin-error').textContent = 'Access denied: ' + user.email + ' is not authorized.';
   }
 });
 
