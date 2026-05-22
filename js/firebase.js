@@ -11,7 +11,7 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 db.enablePersistence().catch(() => {});
 
-const ALLOWED_EMAILS = ['adilmacd@gmail.com','nooraink@gmail.com'];
+const ALLOWED_EMAILS = ['adilmacd@gmail.com','nooraink@gmail.com','nooraink@googlemail.com'];
 let currentUser = null;
 
 function googleSignIn() {
