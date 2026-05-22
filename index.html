@@ -352,12 +352,10 @@ auth.onAuthStateChanged(user => {
     currentUser = user;
     document.getElementById('signin-screen').classList.add('hidden');
     document.getElementById('pin-screen').classList.remove('hidden');
-    // Migrate localStorage to Firestore on first sign-in
-    migrateToFirestore().then(() => {
-      loadFromFirestore().then(() => {
-        initPin();
-      });
-    });
+    initPin();
+    // Sync in background — don't block the UI
+    migrateToFirestore().catch(() => {});
+    loadFromFirestore().catch(() => {});
   } else if (user) {
     auth.signOut();
     document.getElementById('signin-error').textContent = 'Access denied: ' + user.email + ' is not authorized.';
