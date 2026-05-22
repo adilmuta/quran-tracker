@@ -408,9 +408,10 @@ async function loadFromFirestore() {
   try {
     const snap = await userDoc().collection('data').get();
     snap.forEach(doc => {
-      localStorage.setItem(doc.id, JSON.stringify(doc.data().value));
+      const val = doc.data().value;
+      localStorage.setItem(doc.id, JSON.stringify(val));
     });
-  } catch(e) {}
+  } catch(e) { console.log('loadFromFirestore error:', e); }
 }
 
 async function migrateToFirestore() {
@@ -1145,12 +1146,14 @@ function renderReport() {
     // Hifdh logs
     const h = load('hifdh_' + dk, null);
     if (h) {
-      const hasSomething = (h.sabaq?.surah || h.sabqi?.surah || h.manzil?.surah || h.online?.surah);
+      const hasSomething = (h.sabaq?.surah || h.sabqi?.surah || h.manzil?.surah || h.online?.surah || h.online_sabqi?.surah || h.online_manzil?.surah);
       if (hasSomething) hifdhDays++;
       if (h.sabaq?.surah) allSabaqs.push(h.sabaq);
       if (h.sabqi?.surah) allSabqis.push(h.sabqi);
       if (h.manzil?.surah) allManzils.push(h.manzil);
       if (h.online?.surah) allOnline.push(h.online);
+      if (h.online_sabqi?.surah) allOnline.push(h.online_sabqi);
+      if (h.online_manzil?.surah) allOnline.push(h.online_manzil);
     }
   }
 
