@@ -199,9 +199,12 @@ header h1 { font-size: 1.4rem; }
       <div class="menu-close" onclick="closeMenu()">✕</div>
       <div class="menu-item" onclick="navTo('dashboard')"><span class="mi-icon">🏠</span> Home</div>
       <div class="menu-item" onclick="navTo('hifdh')"><span class="mi-icon">🕌</span> Hifdh Log</div>
+      <div class="menu-item" onclick="navTo('juzmap')"><span class="mi-icon">🗺️</span> Juz Map</div>
       <div class="menu-item" onclick="navTo('quran')"><span class="mi-icon">📖</span> Exam Prep</div>
       <div class="menu-item" onclick="navTo('planner')"><span class="mi-icon">📅</span> Daily Planner</div>
       <div class="menu-item" onclick="navTo('academics')"><span class="mi-icon">📚</span> Academics</div>
+      <div class="menu-item" onclick="navTo('goals')"><span class="mi-icon">🎯</span> Goals</div>
+      <div class="menu-item" onclick="navTo('badges')"><span class="mi-icon">🏆</span> Badges</div>
       <div class="menu-item" onclick="navTo('weekly')"><span class="mi-icon">📋</span> Weekly Review</div>
       <div class="menu-item" onclick="navTo('report')"><span class="mi-icon">📊</span> Monthly Report</div>
       <div class="menu-item" onclick="navTo('rewards')"><span class="mi-icon">⭐</span> Rewards</div>
@@ -258,6 +261,39 @@ header h1 { font-size: 1.4rem; }
       <button onclick="changeDay(1)">▶</button>
     </div>
     <div class="card" id="planner-tasks"></div>
+  </div>
+
+  <div id="juzmap" class="tab-content hidden">
+    <div class="card">
+      <h3>🗺️ Juz Progress Map</h3>
+      <p style="font-size:0.8rem;color:var(--muted);margin-bottom:12px;">Tap a juz to mark as complete. Colors show revision health.</p>
+      <div id="juz-grid"></div>
+      <div style="margin-top:12px;font-size:0.75rem;color:var(--muted);">
+        🟢 Complete & healthy · 🟡 Needs revision · 🔴 Repeat/missed recently · ⬜ Not started · 🔵 In progress
+      </div>
+    </div>
+  </div>
+
+  <div id="goals" class="tab-content hidden">
+    <div class="card">
+      <h3>🎯 Active Goals</h3>
+      <div id="goals-list"></div>
+    </div>
+    <div class="card">
+      <h3>➕ New Goal</h3>
+      <div class="routine-editor">
+        <input id="goal-name" placeholder="Goal (e.g. Complete Juz 1)">
+        <input id="goal-date" type="date" placeholder="Target date">
+        <button class="btn btn-primary" onclick="addGoal()">Add Goal</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="badges" class="tab-content hidden">
+    <div class="card">
+      <h3>🏆 Achievement Badges</h3>
+      <div id="badges-grid"></div>
+    </div>
   </div>
 
   <div id="academics" class="tab-content hidden">
@@ -571,9 +607,12 @@ function navTo(id) {
   closeMenu();
   if (id==='dashboard') renderDashboard();
   if (id==='hifdh') renderHifdh();
+  if (id==='juzmap') renderJuzMap();
   if (id==='quran') renderQuran();
   if (id==='planner') renderPlanner();
   if (id==='academics') renderAcademics();
+  if (id==='goals') renderGoals();
+  if (id==='badges') renderBadges();
   if (id==='weekly') renderWeekly();
   if (id==='report') renderReport();
   if (id==='rewards') renderRewards();
@@ -972,6 +1011,173 @@ function viewPhoto() {
 }
 
 function esc(s) { return (s||'').replace(/"/g,'&quot;'); }
+
+// === JUZ MAP ===
+function getJuzStatus() { return load('juz_status', {26:'complete',27:'complete',28:'complete',29:'complete',30:'complete',1:'in_progress'}); }
+
+function getJuzHealth(juzNum) {
+  // Check last 7 days of hifdh logs for this juz's surahs
+  let completes = 0, repeats = 0, missed = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today()); d.setDate(d.getDate() - i);
+    const h = load('hifdh_' + dateKey(d), null);
+    if (!h) continue;
+    ['sabaq','sabqi','manzil','online','online_sabqi','online_manzil'].forEach(field => {
+      if (h[field]?.surah) {
+        // Check if this surah belongs to this juz (approximate)
+        const sn = parseInt(h[field].surah);
+        const juzForSurah = getJuzForSurah(sn);
+        if (juzForSurah === juzNum) {
+          if (h[field].status === 'complete') completes++;
+          if (h[field].status === 'repeat') repeats++;
+          if (h[field].status === 'missed') missed++;
+        }
+      }
+    });
+  }
+  if (missed > 0) return 'red';
+  if (repeats > completes && repeats > 0) return 'yellow';
+  if (completes > 0) return 'green';
+  return 'none';
+}
+
+function getJuzForSurah(surahNum) {
+  // Simplified juz lookup
+  if (surahNum <= 2) return 1;
+  if (surahNum <= 2) return 2; // Al-Baqarah spans 1-3
+  if (surahNum >= 78) return 30;
+  if (surahNum >= 67) return 29;
+  if (surahNum >= 58) return 28;
+  if (surahNum >= 51) return 27;
+  if (surahNum >= 46) return 26;
+  return Math.ceil(surahNum / 2); // rough approximation for middle juz
+}
+
+function renderJuzMap() {
+  const status = getJuzStatus();
+  let html = '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">';
+  for (let j = 1; j <= 30; j++) {
+    const s = status[j] || 'not_started';
+    const health = s === 'complete' ? getJuzHealth(j) : 'none';
+    let bg = 'var(--border)'; let color = 'var(--text)'; let border = 'var(--border)';
+    if (s === 'complete' && health === 'green') { bg = 'var(--ok)'; color = 'white'; }
+    else if (s === 'complete' && health === 'yellow') { bg = 'var(--warn)'; color = 'var(--text)'; }
+    else if (s === 'complete' && health === 'red') { bg = 'var(--danger)'; color = 'white'; }
+    else if (s === 'complete') { bg = 'var(--ok)'; color = 'white'; }
+    else if (s === 'in_progress') { bg = 'var(--accent2)'; color = 'white'; border = 'var(--accent)'; }
+    html += `<div onclick="toggleJuz(${j})" style="aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:10px;background:${bg};color:${color};border:2px solid ${border};cursor:pointer;font-size:0.8rem;font-weight:600;">
+      <div style="font-size:1.1rem;">${j}</div>
+      <div style="font-size:0.6rem;opacity:0.8;">${s==='complete'?'✓':s==='in_progress'?'◐':''}</div>
+    </div>`;
+  }
+  html += '</div>';
+  document.getElementById('juz-grid').innerHTML = html;
+}
+
+function toggleJuz(j) {
+  const status = getJuzStatus();
+  const current = status[j] || 'not_started';
+  const next = current === 'not_started' ? 'in_progress' : current === 'in_progress' ? 'complete' : 'not_started';
+  status[j] = next;
+  save('juz_status', status);
+  renderJuzMap();
+  checkBadges();
+}
+
+// === GOALS ===
+function getGoals() { return load('goals', [{name:'Complete Juz 1',date:'2026-06-01',done:false},{name:'Pass Juz 26-28 exam',date:'2026-06-02',done:false}]); }
+
+function renderGoals() {
+  const goals = getGoals();
+  document.getElementById('goals-list').innerHTML = goals.length === 0
+    ? '<p style="color:var(--muted);">No goals set. Add one below!</p>'
+    : goals.map((g,i) => {
+      const deadline = new Date(g.date);
+      const daysLeft = Math.ceil((deadline - today()) / 86400000);
+      const status = g.done ? '✅' : daysLeft < 0 ? '⏰ Overdue' : `${daysLeft} days left`;
+      return `<div style="padding:12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;${g.done?'opacity:0.6;':''}">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-weight:600;font-size:0.9rem;">${g.name}</span>
+          <span style="font-size:0.75rem;color:${daysLeft<3&&!g.done?'var(--danger)':'var(--muted)'};">${status}</span>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:8px;">
+          ${!g.done ? `<button class="btn btn-sm btn-primary" onclick="completeGoal(${i})">✅ Done!</button>` : ''}
+          <button class="btn btn-sm btn-danger" onclick="removeGoal(${i})">✕</button>
+        </div>
+      </div>`;
+    }).join('');
+}
+
+function addGoal() {
+  const name = document.getElementById('goal-name').value.trim();
+  const date = document.getElementById('goal-date').value;
+  if (!name || !date) return;
+  const goals = getGoals();
+  goals.push({name, date, done: false});
+  save('goals', goals);
+  document.getElementById('goal-name').value = '';
+  document.getElementById('goal-date').value = '';
+  renderGoals();
+}
+
+function completeGoal(i) {
+  const goals = getGoals();
+  goals[i].done = true;
+  save('goals', goals);
+  addStars(10, `Goal complete: ${goals[i].name}`);
+  renderGoals();
+  checkBadges();
+}
+
+function removeGoal(i) {
+  const goals = getGoals();
+  goals.splice(i, 1);
+  save('goals', goals);
+  renderGoals();
+}
+
+// === BADGES ===
+const BADGE_DEFS = [
+  {id:'first_week',name:'First Week',icon:'🌱',desc:'Used the app for 7 days',check:()=>load('streak',0)>=7},
+  {id:'streak_30',name:'Consistent',icon:'🔥',desc:'30-day streak',check:()=>load('streak',0)>=30},
+  {id:'streak_90',name:'Unstoppable',icon:'💎',desc:'90-day streak',check:()=>load('streak',0)>=90},
+  {id:'juz_1',name:'First Juz',icon:'📗',desc:'Completed first juz',check:()=>{const s=getJuzStatus();return Object.values(s).filter(v=>v==='complete').length>=1;}},
+  {id:'juz_5',name:'Five Down',icon:'📚',desc:'Completed 5 juz',check:()=>{const s=getJuzStatus();return Object.values(s).filter(v=>v==='complete').length>=5;}},
+  {id:'juz_10',name:'Quarter Hafidha',icon:'🌟',desc:'Completed 10 juz',check:()=>{const s=getJuzStatus();return Object.values(s).filter(v=>v==='complete').length>=10;}},
+  {id:'juz_20',name:'Two-Thirds',icon:'👑',desc:'Completed 20 juz',check:()=>{const s=getJuzStatus();return Object.values(s).filter(v=>v==='complete').length>=20;}},
+  {id:'juz_30',name:'Hafidha!',icon:'🕋',desc:'Completed all 30 juz!',check:()=>{const s=getJuzStatus();return Object.values(s).filter(v=>v==='complete').length>=30;}},
+  {id:'goal_1',name:'Goal Getter',icon:'🎯',desc:'Completed first goal',check:()=>getGoals().some(g=>g.done)},
+  {id:'stars_50',name:'Star Collector',icon:'⭐',desc:'Earned 50 stars',check:()=>getStars()>=50},
+  {id:'stars_200',name:'Star Master',icon:'🌠',desc:'Earned 200 stars',check:()=>getStars()>=200},
+  {id:'perfect_week',name:'Perfect Week',icon:'🏆',desc:'All tasks done for 7 days straight',check:()=>load('streak',0)>=7},
+];
+
+function checkBadges() {
+  const earned = load('badges_earned', []);
+  let newBadge = false;
+  BADGE_DEFS.forEach(b => {
+    if (!earned.includes(b.id) && b.check()) {
+      earned.push(b.id);
+      newBadge = true;
+      addStars(10, `Badge earned: ${b.name} ${b.icon}`);
+    }
+  });
+  if (newBadge) save('badges_earned', earned);
+}
+
+function renderBadges() {
+  checkBadges();
+  const earned = load('badges_earned', []);
+  document.getElementById('badges-grid').innerHTML = `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">` +
+    BADGE_DEFS.map(b => {
+      const has = earned.includes(b.id);
+      return `<div style="text-align:center;padding:12px 8px;border-radius:10px;border:1px solid var(--border);${has?'':'opacity:0.3;filter:grayscale(1);'}">
+        <div style="font-size:2rem;">${b.icon}</div>
+        <div style="font-size:0.75rem;font-weight:600;margin-top:4px;">${b.name}</div>
+        <div style="font-size:0.65rem;color:var(--muted);">${b.desc}</div>
+      </div>`;
+    }).join('') + '</div>';
+}
 
 // === ACADEMICS ===
 const DEFAULT_SUBJECTS = ['Math','English','Science','Arabic','Islamic Studies'];
