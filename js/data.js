@@ -37,3 +37,25 @@ function dateKey(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padSta
 function today() { const d = new Date(); d.setHours(0,0,0,0); return d; }
 let currentDay = new Date(); currentDay.setHours(0,0,0,0);
 
+
+// Migration: fix keys saved with old UTC-based dateKey
+function migrateLocalDateKeys() {
+  if (localStorage.getItem('_migrated_datekeys')) return;
+  const prefixes = ['hifdh_','tasks_','acad_'];
+  for (let i = localStorage.length - 1; i >= 0; i--) {
+    const key = localStorage.key(i);
+    const prefix = prefixes.find(p => key.startsWith(p));
+    if (!prefix) continue;
+    const datePart = key.slice(prefix.length);
+    // Check if it's a valid date and re-key it using local format
+    const d = new Date(datePart + 'T12:00:00'); // noon to avoid timezone shift
+    if (isNaN(d)) continue;
+    const correctKey = prefix + dateKey(d);
+    if (correctKey !== key && !localStorage.getItem(correctKey)) {
+      localStorage.setItem(correctKey, localStorage.getItem(key));
+      localStorage.removeItem(key);
+    }
+  }
+  localStorage.setItem('_migrated_datekeys', '1');
+}
+migrateLocalDateKeys();
