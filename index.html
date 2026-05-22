@@ -173,6 +173,7 @@ header h1 { font-size: 1.4rem; }
     <div class="tab" onclick="showTab('hifdh',this)">🕌</div>
     <div class="tab" onclick="showTab('quran',this)">📖</div>
     <div class="tab" onclick="showTab('planner',this)">📅</div>
+    <div class="tab" onclick="showTab('report',this)">📊</div>
     <div class="tab" onclick="showTab('rewards',this)">⭐</div>
     <div class="tab" onclick="showTab('routine',this)">⚙️</div>
   </div>
@@ -218,6 +219,17 @@ header h1 { font-size: 1.4rem; }
       <button onclick="changeDay(1)">▶</button>
     </div>
     <div class="card" id="planner-tasks"></div>
+  </div>
+
+  <div id="report" class="tab-content hidden">
+    <div class="day-nav">
+      <button onclick="changeMonth(-1)">◀</button>
+      <span class="date" id="report-month"></span>
+      <button onclick="changeMonth(1)">▶</button>
+    </div>
+    <div class="card" id="report-summary"></div>
+    <div class="card" id="report-hifdh"></div>
+    <div class="card" id="report-planner"></div>
   </div>
 
   <div id="rewards" class="tab-content hidden">
@@ -409,6 +421,7 @@ function showTab(id, el) {
   if (id==='hifdh') renderHifdh();
   if (id==='quran') renderQuran();
   if (id==='planner') renderPlanner();
+  if (id==='report') renderReport();
   if (id==='rewards') renderRewards();
   if (id==='routine') renderRoutine();
 }
@@ -736,6 +749,115 @@ function updateHifdh(field, value) {
 }
 
 function esc(s) { return (s||'').replace(/"/g,'&quot;'); }
+
+// === MONTHLY REPORT ===
+let reportMonth = new Date(); reportMonth.setDate(1); reportMonth.setHours(0,0,0,0);
+
+function changeMonth(delta) { reportMonth.setMonth(reportMonth.getMonth() + delta); renderReport(); }
+
+function renderReport() {
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('report-month').textContent = `${months[reportMonth.getMonth()]} ${reportMonth.getFullYear()}`;
+
+  const year = reportMonth.getFullYear(), month = reportMonth.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  // Gather data for the month
+  let totalTasks = 0, completedTasks = 0, perfectDays = 0, hifdhDays = 0;
+  let allSabaqs = [], allSabqis = [], allManzils = [], allOnline = [];
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const d = new Date(year, month, day);
+    const dk = dateKey(d);
+
+    // Planner tasks
+    const tasks = load('tasks_' + dk, null);
+    if (tasks && tasks.length > 0) {
+      totalTasks += tasks.length;
+      const done = tasks.filter(t => t.done).length;
+      completedTasks += done;
+      if (done === tasks.length) perfectDays++;
+    }
+
+    // Hifdh logs
+    const h = load('hifdh_' + dk, null);
+    if (h) {
+      const hasSomething = (h.sabaq?.surah || h.sabqi?.surah || h.manzil?.surah || h.online?.surah);
+      if (hasSomething) hifdhDays++;
+      if (h.sabaq?.surah) allSabaqs.push(h.sabaq);
+      if (h.sabqi?.surah) allSabqis.push(h.sabqi);
+      if (h.manzil?.surah) allManzils.push(h.manzil);
+      if (h.online?.surah) allOnline.push(h.online);
+    }
+  }
+
+  const taskPct = totalTasks ? Math.round(completedTasks/totalTasks*100) : 0;
+
+  // Summary card
+  document.getElementById('report-summary').innerHTML = `
+    <h3>📊 Monthly Summary</h3>
+    <div class="stats">
+      <div class="stat"><div class="num">${perfectDays}</div><div class="label">Perfect Days</div></div>
+      <div class="stat"><div class="num">${hifdhDays}</div><div class="label">Hifdh Days</div></div>
+      <div class="stat"><div class="num">${taskPct}%</div><div class="label">Tasks Done</div></div>
+    </div>
+    <div style="font-size:0.85rem;margin-top:8px;">
+      <div>✅ ${completedTasks}/${totalTasks} total tasks completed</div>
+      <div>🌟 ${perfectDays} days with ALL tasks done</div>
+      <div>📖 ${hifdhDays} days with Quran logged</div>
+    </div>`;
+
+  // Hifdh summary
+  function fmtEntry(f) {
+    const s = ALL_SURAHS.find(x => x.n == f.surah);
+    const name = s ? s.name : `Surah ${f.surah}`;
+    return f.from ? `${name} ${f.from}${f.to ? '-'+f.to : ''}` : name;
+  }
+  function summarizeEntries(entries, label, emoji) {
+    if (entries.length === 0) return '';
+    // Group by surah
+    const grouped = {};
+    entries.forEach(e => {
+      const s = ALL_SURAHS.find(x => x.n == e.surah);
+      const name = s ? s.name : `Surah ${e.surah}`;
+      if (!grouped[name]) grouped[name] = [];
+      if (e.from) grouped[name].push(e.from + (e.to ? '-'+e.to : ''));
+    });
+    const lines = Object.entries(grouped).map(([name, ranges]) =>
+      `<div style="margin-left:12px;">${name}: ${ranges.length > 0 ? ranges.join(', ') : '✓'}</div>`
+    ).join('');
+    return `<div style="margin-bottom:8px;"><b>${emoji} ${label} (${entries.length} sessions)</b>${lines}</div>`;
+  }
+
+  document.getElementById('report-hifdh').innerHTML = `<h3>🕌 Hifdh Progress</h3>` +
+    (hifdhDays === 0 ? '<p style="color:var(--muted)">No hifdh logged this month</p>' :
+    summarizeEntries(allSabaqs, 'Sabaq (New)', '📗') +
+    summarizeEntries(allSabqis, 'Sabqi (Revision)', '📘') +
+    summarizeEntries(allManzils, 'Manzil (Old)', '📙') +
+    summarizeEntries(allOnline, 'Online Ustad', '💻'));
+
+  // Planner heatmap
+  let heatmap = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:8px;">';
+  const dayLabels = ['S','M','T','W','T','F','S'];
+  heatmap += dayLabels.map(d => `<div style="text-align:center;font-size:0.7rem;color:var(--muted);">${d}</div>`).join('');
+  // Pad start
+  const firstDow = new Date(year, month, 1).getDay();
+  for (let i = 0; i < firstDow; i++) heatmap += '<div></div>';
+  for (let day = 1; day <= daysInMonth; day++) {
+    const d = new Date(year, month, day);
+    const tasks = load('tasks_' + dateKey(d), null);
+    let color = 'var(--border)';
+    if (tasks && tasks.length > 0) {
+      const pct = tasks.filter(t=>t.done).length / tasks.length;
+      if (pct === 1) color = 'var(--ok)';
+      else if (pct > 0.5) color = 'var(--warn)';
+      else if (pct > 0) color = 'var(--gold)';
+    }
+    heatmap += `<div style="aspect-ratio:1;border-radius:4px;background:${color};display:flex;align-items:center;justify-content:center;font-size:0.65rem;color:${color==='var(--ok)'?'white':'var(--text)'}">${day}</div>`;
+  }
+  heatmap += '</div>';
+  document.getElementById('report-planner').innerHTML = `<h3>📅 Daily Completion</h3><p style="font-size:0.75rem;color:var(--muted);margin-bottom:4px;">🟩 All done · 🟨 Most done · 🟧 Some · ⬜ None</p>${heatmap}`;
+}
 
 // === INIT ===
 initPin();
