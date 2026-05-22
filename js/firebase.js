@@ -52,6 +52,9 @@ async function loadFromFirestore() {
       const val = doc.data().value;
       localStorage.setItem(doc.id, JSON.stringify(val));
     });
+    // Re-render current view after data loads
+    const visible = document.querySelector('.tab-content:not(.hidden)');
+    if (visible) navTo(visible.id);
   } catch(e) { console.log('loadFromFirestore error:', e); }
 }
 
