@@ -5,12 +5,23 @@ let newPinTemp = '';
 let currentRole = 'child'; // 'child' or 'parent'
 
 function initPin() {
+  // Migrate old single PIN to child PIN
+  const oldPin = localStorage.getItem('pin');
+  if (oldPin && !localStorage.getItem('pin_child')) {
+    localStorage.setItem('pin_child', oldPin);
+  }
+
   const childPin = localStorage.getItem('pin_child');
   const parentPin = localStorage.getItem('pin_parent');
-  if (!childPin || !parentPin) {
+  if (!childPin) {
     pinMode = 'setup_child';
     document.getElementById('pin-subtitle').textContent = 'Create Child PIN (4 digits)';
     document.getElementById('pin-setup-hint').textContent = 'First time setup';
+    updateDots();
+  } else if (!parentPin) {
+    pinMode = 'setup_parent';
+    document.getElementById('pin-subtitle').textContent = 'Create Parent PIN (6 digits)';
+    document.getElementById('pin-setup-hint').textContent = 'Parent gets full access';
     updateDots();
   } else {
     document.getElementById('pin-subtitle').textContent = 'Enter PIN';
