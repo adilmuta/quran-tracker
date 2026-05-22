@@ -1,6 +1,6 @@
 // Tab HTML setup
 function initTabHTML() {
-  document.getElementById('dashboard').innerHTML = '<div class="countdown" id="countdown"></div><div class="streak" id="streak"></div><div class="stats" id="stats"></div><div class="card"><h3>📋 Next Up</h3><div id="today-summary"></div></div>';
+  document.getElementById('dashboard').innerHTML = '<div class="countdown" id="countdown"></div><div class="streak" id="streak"></div><div class="stats" id="stats"></div><div class="card" id="needs-attention"></div><div class="card"><h3>📋 Next Up</h3><div id="today-summary"></div></div>';
   document.getElementById('quran').innerHTML = '<div class="card"><h3>📊 Progress</h3><div id="quran-progress"></div></div><div class="section-title">Juz 28</div><div class="card"><div class="surah-grid" id="juz28"></div></div><div class="section-title">Juz 27</div><div class="card"><div class="surah-grid" id="juz27"></div></div><div class="section-title">Juz 26</div><div class="card"><div class="surah-grid" id="juz26"></div></div>';
   document.getElementById('planner').innerHTML = '<div class="day-nav"><button onclick="changeDay(-1)">◀</button><span class="date" id="planner-date"></span><button onclick="changeDay(1)">▶</button></div><div class="card" id="planner-tasks"></div>';
   document.getElementById('rewards').innerHTML = '<div class="card"><div class="rewards-header"><h3>⭐ Stars Earned</h3><div class="stars-display">⭐ <span id="star-count">0</span></div></div><p style="font-size:0.8rem;color:var(--muted);">Earn stars by completing tasks & surahs.</p><div style="margin-top:12px;font-size:0.85rem;"><div>✅ Task = <b>1⭐</b></div><div>📖 Surah = <b>3⭐</b></div><div>🔥 All tasks = <b>5⭐</b></div><div>📅 7-day streak = <b>20⭐</b></div></div></div><div class="card"><h3>🎁 Rewards Shop</h3><div id="rewards-shop"></div></div><div class="card"><h3>📜 History</h3><div class="reward-log" id="reward-log"></div></div><div class="card"><h3>➕ Add Custom Reward</h3><div class="routine-editor"><input id="new-reward-name" placeholder="Reward name"><input id="new-reward-cost" type="number" placeholder="Star cost"><button class="btn btn-gold" onclick="addReward()">Add Reward</button></div></div>';
@@ -198,5 +198,28 @@ function renderDashboard() {
   document.getElementById('today-summary').innerHTML = pending.length === 0
     ? `<p style="color:var(--ok);font-weight:600;">✅ All done! MashaAllah!</p>`
     : pending.slice(0,4).map(t => `<div class="check-item"><span class="time">${t.time}</span><label>${t.task}</label></div>`).join('');
+
+  // Needs Attention
+  const issues = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today()); d.setDate(d.getDate() - i);
+    const h = load('hifdh_' + dateKey(d), null);
+    if (!h) continue;
+    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const label = i === 0 ? 'Today' : i === 1 ? 'Yesterday' : `${days[d.getDay()]} ${d.getDate()}`;
+    ['sabaq','sabqi','manzil','online','online_sabqi','online_manzil'].forEach(field => {
+      if (h[field]?.surah && (h[field].status === 'repeat' || h[field].status === 'missed')) {
+        const s = ALL_SURAHS.find(x => x.n == h[field].surah);
+        const name = s ? s.name : 'Surah ' + h[field].surah;
+        const range = h[field].from ? ` ${h[field].from}-${h[field].to||''}` : '';
+        const icon = h[field].status === 'repeat' ? '🔁' : '❌';
+        const type = field.includes('online') ? '💻' : field === 'sabaq' ? '📗' : field === 'sabqi' ? '📘' : '📙';
+        issues.push(`<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:0.85rem;">${type} ${name}${range} — ${icon} ${h[field].status === 'repeat' ? 'Repeat' : 'Missed'} <span style="color:var(--muted);font-size:0.75rem;">(${label})</span></div>`);
+      }
+    });
+  }
+  document.getElementById('needs-attention').innerHTML = issues.length === 0
+    ? '<h3 style="color:var(--ok);">✅ All Good!</h3><p style="font-size:0.85rem;color:var(--muted);">No repeats or missed sessions this week.</p>'
+    : `<h3 style="color:var(--danger);">⚠️ Needs Attention</h3>${issues.slice(0,5).join('')}${issues.length > 5 ? `<p style="font-size:0.75rem;color:var(--muted);margin-top:6px;">+${issues.length-5} more...</p>` : ''}`;
 }
 
