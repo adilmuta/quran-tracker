@@ -94,7 +94,34 @@ function renderHifdh() {
     hifdhFieldHTML('online','💻 Sabaq (New)','Hazrat Online',log) +
     hifdhFieldHTML('online_sabqi','💻 Sabqi (Revision)','Hazrat Online',log) +
     hifdhFieldHTML('online_manzil','💻 Manzil (Old)','Hazrat Online',log) +
+    `<div class="hifdh-field" style="border-top:2px solid var(--border);padding-top:12px;margin-top:12px;">
+      <label>🏠 Home Reading <span class="teacher-tag" style="background:var(--gold);">At Home</span></label>
+    </div>` +
     `<div class="hifdh-field">
+      <label>⏰ Time & Duration</label>
+      <div style="display:flex;gap:6px;">
+        <input style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem;" type="time" value="${log.home_time||''}" onchange="updateHifdh('home_time',this.value)">
+        <select style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem;" onchange="updateHifdh('home_duration',this.value)">
+          <option value="">Duration...</option>
+          ${['10 min','15 min','20 min','30 min','45 min','1 hour'].map(d => `<option value="${d}" ${log.home_duration===d?'selected':''}>${d}</option>`).join('')}
+        </select>
+      </div>
+    </div>` +
+    hifdhFieldHTML('home_reading','🏠 What was practiced','At Home',log) +
+    `<div class="hifdh-field">
+      <label>👂 Tested by</label>
+      <div style="display:flex;gap:6px;">
+        <select style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem;" onchange="updateHifdh('home_tester',this.value)">
+          <option value="">No one tested</option>
+          ${['Baba','Mama','Self-check','Sibling','Other'].map(t => `<option value="${t}" ${log.home_tester===t?'selected':''}>${t}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="hifdh-field">
+      <label>📝 Home Notes</label>
+      <textarea onchange="updateHifdh('home_notes',this.value)" placeholder="How did it go? Any mistakes? Confidence level...">${esc(log.home_notes||'')}</textarea>
+    </div>` +
+    `<div class="hifdh-field" style="border-top:2px solid var(--border);padding-top:12px;margin-top:12px;">
       <label>👩‍🏫 Sr. Amany's Feedback</label>
       <textarea onchange="updateHifdh('feedback',this.value)" placeholder="What did the teacher say? Any corrections, praise, or areas to improve...">${esc(log.feedback||'')}</textarea>
     </div>
@@ -118,7 +145,7 @@ function renderHifdh() {
   for (let i = 0; i < 7; i++) {
     if (i > 0) d.setDate(d.getDate() - 1);
     const l = load('hifdh_' + dateKey(d), null);
-    if (l && (l.sabaq?.surah || l.sabqi?.surah || l.manzil?.surah || l.online?.surah || l.online_sabqi?.surah || l.online_manzil?.surah)) {
+    if (l && (l.sabaq?.surah || l.sabqi?.surah || l.manzil?.surah || l.online?.surah || l.online_sabqi?.surah || l.online_manzil?.surah || l.home_reading?.surah)) {
       history.push({date: new Date(d), ...l});
     }
   }
@@ -140,6 +167,7 @@ function renderHifdh() {
         ${fmtField(h.online) ? `<div class="detail">💻 Sabaq: ${fmtField(h.online)}</div>` : ''}
         ${fmtField(h.online_sabqi) ? `<div class="detail">💻 Sabqi: ${fmtField(h.online_sabqi)}</div>` : ''}
         ${fmtField(h.online_manzil) ? `<div class="detail">💻 Manzil: ${fmtField(h.online_manzil)}</div>` : ''}
+        ${fmtField(h.home_reading) ? `<div class="detail">🏠 Home: ${fmtField(h.home_reading)}${h.home_duration?' ('+h.home_duration+')':''}${h.home_tester?' — tested by '+h.home_tester:''}</div>` : ''}
         ${h.feedback ? `<div class="detail">👩‍🏫 ${h.feedback}</div>` : ''}
         ${h.notes ? `<div class="detail">📝 ${h.notes}</div>` : ''}
       </div>`).join('');
