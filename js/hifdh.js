@@ -88,15 +88,17 @@ function renderHifdh() {
 
   const log = getHifdhLog(hifdhDay);
   document.getElementById('hifdh-form').innerHTML =
+    `<details open style="margin-bottom:12px;"><summary style="cursor:pointer;font-weight:600;font-size:0.95rem;padding:8px 0;color:var(--accent);">🕌 Sr. Amany (School)</summary>` +
     hifdhFieldHTML('sabaq','📗 Sabaq (New Lesson)','Sr. Amany',log) +
     hifdhFieldHTML('sabqi','📘 Sabqi (Recent Revision)','Sr. Amany',log) +
     hifdhFieldHTML('manzil','📙 Manzil (Older Revision)','Sr. Amany',log) +
+    `</details>` +
+    `<details style="margin-bottom:12px;"><summary style="cursor:pointer;font-weight:600;font-size:0.95rem;padding:8px 0;color:var(--accent);">💻 Hazrat Online</summary>` +
     hifdhFieldHTML('online','💻 Sabaq (New)','Hazrat Online',log) +
     hifdhFieldHTML('online_sabqi','💻 Sabqi (Revision)','Hazrat Online',log) +
     hifdhFieldHTML('online_manzil','💻 Manzil (Old)','Hazrat Online',log) +
-    `<div class="hifdh-field" style="border-top:2px solid var(--border);padding-top:12px;margin-top:12px;">
-      <label>🏠 Home Reading <span class="teacher-tag" style="background:var(--gold);">At Home</span></label>
-    </div>` +
+    `</details>` +
+    `<details style="margin-bottom:12px;"><summary style="cursor:pointer;font-weight:600;font-size:0.95rem;padding:8px 0;color:var(--gold);">🏠 Home Reading</summary>` +
     `<div class="hifdh-field">
       <label>⏰ Time & Duration</label>
       <div style="display:flex;gap:6px;">
@@ -134,8 +136,9 @@ function renderHifdh() {
     <div class="hifdh-field">
       <label>📝 Home Notes</label>
       <textarea onchange="updateHifdh('home_notes',this.value)" placeholder="How did it go? Any mistakes? Confidence level...">${esc(log.home_notes||'')}</textarea>
-    </div>` +
-    `<div class="hifdh-field" style="border-top:2px solid var(--border);padding-top:12px;margin-top:12px;">
+    </div></details>` +
+    `<details style="margin-bottom:12px;"><summary style="cursor:pointer;font-weight:600;font-size:0.95rem;padding:8px 0;color:var(--accent);">👩‍🏫 Feedback & Photos</summary>
+    <div class="hifdh-field">
       <label>👩‍🏫 Sr. Amany's Feedback</label>
       <textarea onchange="updateHifdh('feedback',this.value)" placeholder="What did the teacher say? Any corrections, praise, or areas to improve...">${esc(log.feedback||'')}</textarea>
     </div>
@@ -151,7 +154,7 @@ function renderHifdh() {
     <div class="hifdh-field">
       <label>📝 Shireen's Notes</label>
       <textarea onchange="updateHifdh('notes',this.value)" placeholder="Anything else to remember...">${esc(log.notes)}</textarea>
-    </div>`;
+    </div></details>`;
 
   // History
   const history = [];
