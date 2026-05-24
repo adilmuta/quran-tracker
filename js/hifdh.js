@@ -111,16 +111,13 @@ function renderHifdh() {
       <label>📖 What was practiced</label>
       <div id="home-entries">${renderHomeEntries(log)}</div>
       <div style="display:flex;gap:6px;margin-top:8px;">
-        <select id="home-entry-type" style="padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem;" onchange="document.getElementById('home-entry-juz').style.display=this.value==='juz'?'':'none';document.getElementById('home-entry-surah').style.display=this.value==='surah'?'':'none';">
+        <select id="home-entry-type" style="padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem;" onchange="toggleHomeEntryType()">
           <option value="juz">Juz</option>
           <option value="surah">Surah</option>
         </select>
-        <select id="home-entry-juz" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem;">
-          <option value="">Select...</option>
+        <select id="home-entry-value" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem;">
+          <option value="">Select Juz...</option>
           ${Array.from({length:30},(_,i)=>`<option value="${i+1}">Juz ${i+1}</option>`).join('')}
-        </select>
-        <select id="home-entry-surah" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem;display:none;">
-          <option value="">Select...</option>${SURAH_OPTIONS}
         </select>
         <button class="btn btn-sm btn-primary" onclick="addHomeEntry()">+</button>
       </div>
@@ -221,13 +218,23 @@ function renderHomeEntries(log) {
 
 function addHomeEntry() {
   const type = document.getElementById('home-entry-type').value;
-  const value = type === 'juz' ? document.getElementById('home-entry-juz').value : document.getElementById('home-entry-surah').value;
+  const value = document.getElementById('home-entry-value').value;
   if (!value) return;
   const log = getHifdhLog(hifdhDay);
   if (!log.home_entries) log.home_entries = [];
   log.home_entries.push({type, value});
   saveHifdhLog(hifdhDay, log);
   renderHifdh();
+}
+
+function toggleHomeEntryType() {
+  const type = document.getElementById('home-entry-type').value;
+  const sel = document.getElementById('home-entry-value');
+  if (type === 'juz') {
+    sel.innerHTML = '<option value="">Select Juz...</option>' + Array.from({length:30},(_,i)=>`<option value="${i+1}">Juz ${i+1}</option>`).join('');
+  } else {
+    sel.innerHTML = '<option value="">Select Surah...</option>' + SURAH_OPTIONS;
+  }
 }
 
 function removeHomeEntry(i) {
