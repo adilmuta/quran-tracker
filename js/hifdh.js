@@ -111,7 +111,7 @@ function renderHifdh() {
       <label>📖 What was practiced</label>
       <div id="home-entries">${renderHomeEntries(log)}</div>
       <div style="display:flex;gap:6px;margin-top:8px;">
-        <select id="home-entry-type" style="padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem;">
+        <select id="home-entry-type" style="padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem;" onchange="document.getElementById('home-entry-juz').style.display=this.value==='juz'?'':'none';document.getElementById('home-entry-surah').style.display=this.value==='surah'?'':'none';">
           <option value="juz">Juz</option>
           <option value="surah">Surah</option>
         </select>
@@ -124,10 +124,6 @@ function renderHifdh() {
         </select>
         <button class="btn btn-sm btn-primary" onclick="addHomeEntry()">+</button>
       </div>
-      <script>document.getElementById('home-entry-type')?.addEventListener('change',function(){
-        document.getElementById('home-entry-juz').style.display=this.value==='juz'?'':'none';
-        document.getElementById('home-entry-surah').style.display=this.value==='surah'?'':'none';
-      });</script>
     </div>` +
     `<div class="hifdh-field">
       <label>👂 Tested by</label>
