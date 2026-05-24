@@ -1,7 +1,7 @@
 // Tab HTML setup
 function initTabHTML() {
   document.getElementById('dashboard').innerHTML = '<div class="countdown" id="countdown"></div><div class="streak" id="streak"></div><div class="stats" id="stats"></div><div class="card" id="needs-attention"></div><div class="card"><h3>📋 Next Up</h3><div id="today-summary"></div></div>';
-  document.getElementById('quran').innerHTML = '<div class="card"><h3>📊 Progress</h3><div id="quran-progress"></div></div><div class="section-title">Juz 28</div><div class="card"><div class="surah-grid" id="juz28"></div></div><div class="section-title">Juz 27</div><div class="card"><div class="surah-grid" id="juz27"></div></div><div class="section-title">Juz 26</div><div class="card"><div class="surah-grid" id="juz26"></div></div>';
+  document.getElementById('quran').innerHTML = '<div class="card"><h3>📊 Progress</h3><div id="quran-progress"></div></div><div class="card"><h3>📝 Today\'s Exam Revision</h3><div id="exam-log"></div></div><div class="section-title">Juz 28</div><div class="card"><div class="surah-grid" id="juz28"></div></div><div class="section-title">Juz 27</div><div class="card"><div class="surah-grid" id="juz27"></div></div><div class="section-title">Juz 26</div><div class="card"><div class="surah-grid" id="juz26"></div></div>';
   document.getElementById('planner').innerHTML = '<div class="day-nav"><button onclick="changeDay(-1)">◀</button><span class="date" id="planner-date"></span><button onclick="changeDay(1)">▶</button></div><div class="card" id="planner-tasks"></div>';
   document.getElementById('rewards').innerHTML = '<div class="card"><div class="rewards-header"><h3>⭐ Stars Earned</h3><div class="stars-display">⭐ <span id="star-count">0</span></div></div><p style="font-size:0.8rem;color:var(--muted);">Earn stars by completing tasks & surahs.</p><div style="margin-top:12px;font-size:0.85rem;"><div>✅ Task = <b>1⭐</b></div><div>📖 Surah = <b>3⭐</b></div><div>🔥 All tasks = <b>5⭐</b></div><div>📅 7-day streak = <b>20⭐</b></div></div></div><div class="card"><h3>🎁 Rewards Shop</h3><div id="rewards-shop"></div></div><div class="card"><h3>📜 History</h3><div class="reward-log" id="reward-log"></div></div><div class="card"><h3>➕ Add Custom Reward</h3><div class="routine-editor"><input id="new-reward-name" placeholder="Reward name"><input id="new-reward-cost" type="number" placeholder="Star cost"><button class="btn btn-gold" onclick="addReward()">Add Reward</button></div></div>';
   document.getElementById('routine').innerHTML = '<div class="card"><h3>⚙️ Daily Routine</h3><p style="font-size:0.8rem;color:var(--muted);margin-bottom:12px;">Default schedule generated each day.</p><div id="routine-list"></div><div class="routine-editor"><input id="new-time" type="time"><input id="new-task" type="text" placeholder="Task name"><button class="btn btn-primary" onclick="addRoutineItem()">+ Add</button></div></div><div class="card"><h3>🔐 Change PIN</h3><button class="btn btn-primary" onclick="changePin()">Change PIN</button></div><div class="card"><h3>🗑️ Reset All Data</h3><button class="btn btn-danger" onclick="if(confirm(\'Reset ALL data?\')){localStorage.clear();location.reload();}">Reset</button></div>';
@@ -45,6 +45,34 @@ function renderQuran() {
   document.getElementById('quran-progress').innerHTML = `
     <div style="display:flex;justify-content:space-between;font-size:0.85rem;"><span>${done}/${total} surahs</span><span>${pct}%</span></div>
     <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>`;
+
+  // Daily exam revision log
+  const examLog = load('exam_' + dateKey(today()), {juz:'',pages:'',confidence:'',notes:''});
+  document.getElementById('exam-log').innerHTML = `
+    <div style="display:flex;gap:6px;margin-bottom:8px;">
+      <select style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem;" onchange="updateExamLog('juz',this.value)">
+        <option value="">Which Juz?</option>
+        <option value="26" ${examLog.juz==='26'?'selected':''}>Juz 26</option>
+        <option value="27" ${examLog.juz==='27'?'selected':''}>Juz 27</option>
+        <option value="28" ${examLog.juz==='28'?'selected':''}>Juz 28</option>
+        <option value="all" ${examLog.juz==='all'?'selected':''}>All 3</option>
+      </select>
+      <input style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem;" placeholder="Pages/surahs covered" value="${esc(examLog.pages||'')}" onchange="updateExamLog('pages',this.value)">
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;">
+      ${['😟 Struggling','😐 OK','😊 Good','🤩 Confident'].map(c => {
+        const val = c.split(' ')[1];
+        return `<button class="btn btn-sm" style="flex:1;border:1px solid var(--border);${examLog.confidence===val?'background:var(--accent);color:white;':'background:var(--bg);color:var(--text);'}" onclick="updateExamLog('confidence','${val}');renderQuran();">${c}</button>`;
+      }).join('')}
+    </div>
+    <textarea style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem;min-height:40px;" placeholder="Weak spots, mistakes, focus for tomorrow..." onchange="updateExamLog('notes',this.value)">${esc(examLog.notes||'')}</textarea>`;
+}
+
+function updateExamLog(field, value) {
+  const key = 'exam_' + dateKey(today());
+  const log = load(key, {juz:'',pages:'',confidence:'',notes:''});
+  log[field] = value;
+  save(key, log);
 }
 function toggleSurah(juz, n, checked) {
   const progress = load('surah_' + juz, {});

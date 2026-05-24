@@ -35,6 +35,7 @@ function load(k, d) { try { return JSON.parse(localStorage.getItem(k)) || d; } c
 function save(k, v) { localStorage.setItem(k, JSON.stringify(v)); syncToFirestore(k, v); }
 function dateKey(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function today() { const d = new Date(); d.setHours(0,0,0,0); return d; }
+function esc(s) { return (s||'').replace(/"/g,'&quot;'); }
 let currentDay = new Date(); currentDay.setHours(0,0,0,0);
 
 
