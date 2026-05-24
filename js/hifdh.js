@@ -107,7 +107,28 @@ function renderHifdh() {
         </select>
       </div>
     </div>` +
-    hifdhFieldHTML('home_reading','🏠 What was practiced','At Home',log) +
+    `<div class="hifdh-field">
+      <label>📖 What was practiced</label>
+      <div id="home-entries">${renderHomeEntries(log)}</div>
+      <div style="display:flex;gap:6px;margin-top:8px;">
+        <select id="home-entry-type" style="padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem;">
+          <option value="juz">Juz</option>
+          <option value="surah">Surah</option>
+        </select>
+        <select id="home-entry-juz" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem;">
+          <option value="">Select...</option>
+          ${Array.from({length:30},(_,i)=>`<option value="${i+1}">Juz ${i+1}</option>`).join('')}
+        </select>
+        <select id="home-entry-surah" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem;display:none;">
+          <option value="">Select...</option>${SURAH_OPTIONS}
+        </select>
+        <button class="btn btn-sm btn-primary" onclick="addHomeEntry()">+</button>
+      </div>
+      <script>document.getElementById('home-entry-type')?.addEventListener('change',function(){
+        document.getElementById('home-entry-juz').style.display=this.value==='juz'?'':'none';
+        document.getElementById('home-entry-surah').style.display=this.value==='surah'?'':'none';
+      });</script>
+    </div>` +
     `<div class="hifdh-field">
       <label>👂 Tested by</label>
       <div style="display:flex;gap:6px;">
@@ -145,7 +166,7 @@ function renderHifdh() {
   for (let i = 0; i < 7; i++) {
     if (i > 0) d.setDate(d.getDate() - 1);
     const l = load('hifdh_' + dateKey(d), null);
-    if (l && (l.sabaq?.surah || l.sabqi?.surah || l.manzil?.surah || l.online?.surah || l.online_sabqi?.surah || l.online_manzil?.surah || l.home_reading?.surah)) {
+    if (l && (l.sabaq?.surah || l.sabqi?.surah || l.manzil?.surah || l.online?.surah || l.online_sabqi?.surah || l.online_manzil?.surah || l.home_entries?.length || l.home_reading?.surah)) {
       history.push({date: new Date(d), ...l});
     }
   }
@@ -167,7 +188,11 @@ function renderHifdh() {
         ${fmtField(h.online) ? `<div class="detail">💻 Sabaq: ${fmtField(h.online)}</div>` : ''}
         ${fmtField(h.online_sabqi) ? `<div class="detail">💻 Sabqi: ${fmtField(h.online_sabqi)}</div>` : ''}
         ${fmtField(h.online_manzil) ? `<div class="detail">💻 Manzil: ${fmtField(h.online_manzil)}</div>` : ''}
-        ${fmtField(h.home_reading) ? `<div class="detail">🏠 Home: ${fmtField(h.home_reading)}${h.home_duration?' ('+h.home_duration+')':''}${h.home_tester?' — tested by '+h.home_tester:''}</div>` : ''}
+        ${(h.home_entries||[]).length ? h.home_entries.map(e => {
+          const lbl = e.type==='juz' ? `Juz ${e.value}` : (ALL_SURAHS.find(s=>s.n==e.value)?.name||`Surah ${e.value}`);
+          return `<div class="detail">🏠 ${lbl}</div>`;
+        }).join('') : (fmtField(h.home_reading) ? `<div class="detail">🏠 Home: ${fmtField(h.home_reading)}</div>` : '')}
+        ${h.home_duration||h.home_tester ? `<div class="detail">🏠 ${h.home_duration||''} ${h.home_tester?'— tested by '+h.home_tester:''}</div>` : ''}
         ${h.feedback ? `<div class="detail">👩‍🏫 ${h.feedback}</div>` : ''}
         ${h.notes ? `<div class="detail">📝 ${h.notes}</div>` : ''}
       </div>`).join('');
@@ -184,6 +209,36 @@ function updateHifdh(field, value) {
   const log = getHifdhLog(hifdhDay);
   log[field] = value;
   saveHifdhLog(hifdhDay, log);
+}
+
+function renderHomeEntries(log) {
+  const entries = log.home_entries || [];
+  if (entries.length === 0) return '<p style="color:var(--muted);font-size:0.8rem;">No entries yet. Add what was practiced below.</p>';
+  return entries.map((e, i) => {
+    const label = e.type === 'juz' ? `Juz ${e.value}` : (ALL_SURAHS.find(s => s.n == e.value)?.name || `Surah ${e.value}`);
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);">
+      <span style="font-size:0.85rem;flex:1;">${e.type === 'juz' ? '📗' : '📄'} ${label}</span>
+      <button class="btn btn-sm btn-danger" onclick="removeHomeEntry(${i})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function addHomeEntry() {
+  const type = document.getElementById('home-entry-type').value;
+  const value = type === 'juz' ? document.getElementById('home-entry-juz').value : document.getElementById('home-entry-surah').value;
+  if (!value) return;
+  const log = getHifdhLog(hifdhDay);
+  if (!log.home_entries) log.home_entries = [];
+  log.home_entries.push({type, value});
+  saveHifdhLog(hifdhDay, log);
+  renderHifdh();
+}
+
+function removeHomeEntry(i) {
+  const log = getHifdhLog(hifdhDay);
+  if (log.home_entries) log.home_entries.splice(i, 1);
+  saveHifdhLog(hifdhDay, log);
+  renderHifdh();
 }
 
 function savePhoto(input) {
