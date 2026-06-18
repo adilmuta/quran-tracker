@@ -59,12 +59,26 @@ function renderQuran() {
   const juzOpts = juzList.map(j => `<option value="${j}">Juz ${j}</option>`).join('');
   const confMap = {Struggling:'😟', OK:'😐', Good:'😊', Confident:'🤩'};
   const dayRevs = getRevisions(today());
+  const counts = {Struggling:0, OK:0, Good:0, Confident:0};
+  dayRevs.forEach(r => { if (counts[r.confidence] !== undefined) counts[r.confidence]++; });
+  const chip = (label, val, n) => `<button class="btn btn-sm" style="border:1px solid var(--border);${revFilter === val ? 'background:var(--accent);color:#fff;' : 'background:var(--bg);color:var(--text);'}" onclick="setRevFilter('${val}')">${label} ${n}</button>`;
+  const summaryHtml = dayRevs.length === 0 ? '' : `
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+      ${chip('All', '', dayRevs.length)}
+      ${chip('😟', 'Struggling', counts.Struggling)}
+      ${chip('😐', 'OK', counts.OK)}
+      ${chip('😊', 'Good', counts.Good)}
+      ${chip('🤩', 'Confident', counts.Confident)}
+    </div>`;
+  const visible = dayRevs.map((r, i) => ({r, i})).filter(({r}) => !revFilter || r.confidence === revFilter);
   const entriesHtml = dayRevs.length === 0
     ? '<p style="color:var(--muted);font-size:0.8rem;">No revision logged yet today. Add one below.</p>'
-    : dayRevs.map((r, i) => {
-        const juzLbl = r.juz === 'all' ? 'All' : (r.juz ? 'Juz ' + r.juz : '—');
-        const conf = confMap[r.confidence] || '';
-        return `<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:0.85rem;">
+    : (visible.length === 0
+      ? '<p style="color:var(--muted);font-size:0.8rem;">No entries match this filter.</p>'
+      : visible.map(({r, i}) => {
+          const juzLbl = r.juz === 'all' ? 'All' : (r.juz ? 'Juz ' + r.juz : '—');
+          const conf = confMap[r.confidence] || '';
+          return `<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:0.85rem;">
           <div style="flex:1;">
             <b>${juzLbl}</b>${r.pages ? ` · ${esc(r.pages)} pp` : ''} ${conf}
             ${r.notes ? `<div style="color:var(--muted);font-size:0.8rem;">${esc(r.notes)}</div>` : ''}
@@ -72,8 +86,9 @@ function renderQuran() {
           </div>
           <button class="btn btn-sm btn-danger" onclick="removeRevision(${i})">✕</button>
         </div>`;
-      }).join('');
+        }).join(''));
   document.getElementById('exam-log').innerHTML = `
+    ${summaryHtml}
     <div id="revision-entries">${entriesHtml}</div>
     <div style="display:flex;gap:6px;margin-top:10px;">
       <select id="rev-juz" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem;">
@@ -92,6 +107,8 @@ function renderQuran() {
     <button class="btn btn-primary btn-sm" style="margin-top:8px;width:100%;" onclick="addRevision()">+ Add revision</button>`;
 }
 
+let revFilter = '';
+function setRevFilter(v) { revFilter = (revFilter === v) ? '' : v; renderQuran(); }
 function getRevisions(d) {
   const key = 'exam_' + dateKey(d);
   const v = load(key, []);
