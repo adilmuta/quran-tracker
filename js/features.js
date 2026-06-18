@@ -367,24 +367,40 @@ function seedVocab() {
 // === VOCAB QUIZ (multiple choice: word -> meaning) ===
 let quizState = null;
 
-function startQuiz() { quizState = {correct: 0, total: 0}; loadQuizQuestion(); renderQuiz(); }
+function startQuiz(mode) { quizState = {correct: 0, total: 0, streak: 0, best: 0, mode: mode || 'w2d'}; loadQuizQuestion(); renderQuiz(); }
 function stopQuiz() { quizState = null; renderQuiz(); }
 function nextQuiz() { if (!quizState) return; loadQuizQuestion(); renderQuiz(); }
+
+// Streak stars, capped per day to avoid farming
+function awardQuizStars(n, reason) {
+  const key = 'quiz_stars_' + dateKey(today());
+  const used = load(key, 0);
+  const CAP = 15;
+  if (used >= CAP) return;
+  const give = Math.min(n, CAP - used);
+  save(key, used + give);
+  if (give > 0 && typeof addStars === 'function') addStars(give, reason);
+}
 
 function loadQuizQuestion() {
   const vocab = getVocab().filter(w => w.word && w.def);
   if (vocab.length < 4) { quizState.notEnough = true; return; }
+  let dir = quizState.mode;
+  if (dir === 'mixed') dir = Math.random() < 0.5 ? 'w2d' : 'd2w';
+  const promptField = dir === 'w2d' ? 'word' : 'def';
+  const answerField = dir === 'w2d' ? 'def' : 'word';
   const target = vocab[Math.floor(Math.random() * vocab.length)];
-  const used = new Set([target.def]);
+  const used = new Set([target[answerField]]);
   const distractors = [];
   let guard = 0;
   while (distractors.length < 3 && guard++ < 300) {
     const w = vocab[Math.floor(Math.random() * vocab.length)];
-    if (!used.has(w.def)) { used.add(w.def); distractors.push(w.def); }
+    if (!used.has(w[answerField])) { used.add(w[answerField]); distractors.push(w[answerField]); }
   }
-  const options = [{text: target.def, correct: true}, ...distractors.map(d => ({text: d, correct: false}))];
+  const options = [{text: target[answerField], correct: true}, ...distractors.map(d => ({text: d, correct: false}))];
   for (let i = options.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [options[i], options[j]] = [options[j], options[i]]; }
-  quizState.word = target.word;
+  quizState.dir = dir;
+  quizState.prompt = target[promptField];
   quizState.options = options;
   quizState.picked = null;
   quizState.notEnough = false;
@@ -394,7 +410,14 @@ function answerQuiz(i) {
   if (!quizState || quizState.picked !== null) return;
   quizState.picked = i;
   quizState.total++;
-  if (quizState.options[i].correct) quizState.correct++;
+  if (quizState.options[i].correct) {
+    quizState.correct++;
+    quizState.streak = (quizState.streak || 0) + 1;
+    if (quizState.streak > (quizState.best || 0)) quizState.best = quizState.streak;
+    if (quizState.streak > 0 && quizState.streak % 3 === 0) awardQuizStars(3, `🔥 ${quizState.streak} quiz streak!`);
+  } else {
+    quizState.streak = 0;
+  }
   renderQuiz();
 }
 
@@ -402,7 +425,10 @@ function renderQuiz() {
   const el = document.getElementById('vocab-quiz');
   if (!el) return;
   if (!quizState) {
-    el.innerHTML = `<p style="font-size:0.85rem;color:var(--muted);margin-bottom:8px;">Test yourself — pick the correct meaning of each word.</p><button class="btn btn-primary" onclick="startQuiz()">Start Quiz</button>`;
+    el.innerHTML = `<p style="font-size:0.85rem;color:var(--muted);margin-bottom:8px;">Test yourself — choose a mode:</p>
+      <button class="btn btn-primary btn-sm" style="display:block;width:100%;margin-bottom:6px;" onclick="startQuiz('w2d')">Word → Meaning</button>
+      <button class="btn btn-primary btn-sm" style="display:block;width:100%;margin-bottom:6px;" onclick="startQuiz('d2w')">Meaning → Word</button>
+      <button class="btn btn-sm" style="display:block;width:100%;border:1px solid var(--border);background:var(--bg);color:var(--text);" onclick="startQuiz('mixed')">🎲 Mixed</button>`;
     return;
   }
   if (quizState.notEnough) {
@@ -424,13 +450,16 @@ function renderQuiz() {
         ? '<div style="color:var(--ok);font-weight:600;font-size:0.85rem;">✅ Correct! MashaAllah</div>'
         : '<div style="color:var(--danger);font-weight:600;font-size:0.85rem;">❌ Not quite — the green one is right.</div>')
     : '';
+  const isW2D = quizState.dir === 'w2d';
+  const promptHtml = isW2D
+    ? `<div style="font-size:1.2rem;font-weight:700;color:var(--accent);margin-bottom:2px;">${esc(quizState.prompt)}</div><div style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;">What does it mean?</div>`
+    : `<div style="font-size:0.82rem;color:var(--muted);margin-bottom:2px;">Which word means:</div><div style="font-size:0.98rem;font-weight:600;margin-bottom:10px;">“${esc(quizState.prompt)}”</div>`;
   el.innerHTML = `
     <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--muted);margin-bottom:8px;">
-      <span>Score: ${quizState.correct}/${quizState.total}</span>
+      <span>Score: ${quizState.correct}/${quizState.total} · 🔥 ${quizState.streak || 0}</span>
       <span style="cursor:pointer;" onclick="stopQuiz()">✕ End</span>
     </div>
-    <div style="font-size:1.2rem;font-weight:700;color:var(--accent);margin-bottom:2px;">${esc(quizState.word)}</div>
-    <div style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;">What does it mean?</div>
+    ${promptHtml}
     ${optsHtml}
     ${feedback}
     ${answered ? `<button class="btn btn-primary btn-sm" style="margin-top:8px;width:100%;" onclick="nextQuiz()">Next →</button>` : ''}`;
