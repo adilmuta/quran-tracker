@@ -1,6 +1,6 @@
 // Tab HTML setup
 function initTabHTML() {
-  document.getElementById('dashboard').innerHTML = '<div class="countdown" id="countdown"></div><div class="streak" id="streak"></div><div class="stats" id="stats"></div><div class="card" id="needs-attention"></div><div class="card"><h3>📋 Next Up</h3><div id="today-summary"></div></div>';
+  document.getElementById('dashboard').innerHTML = '<div class="countdown" id="countdown"></div><div class="streak" id="streak"></div><div class="stats" id="stats"></div><div class="card" id="needs-attention"></div><div class="card"><h3>📋 Next Up</h3><div id="today-summary"></div></div><div class="card"><h3>🔤 Word of the Day</h3><div id="dash-vocab"></div></div>';
   document.getElementById('quran').innerHTML = '<div class="card"><h3>📖 Memorization Progress</h3><p style="font-size:0.8rem;color:var(--muted);margin-bottom:10px;">15-line Madani mushaf · 20 pages per juz · tap a page to mark it memorized</p><div id="juz-pages"></div></div><div class="card"><h3>📝 Today\'s Revision</h3><div id="exam-log"></div></div>';
   document.getElementById('planner').innerHTML = '<div class="day-nav"><button onclick="changeDay(-1)">◀</button><span class="date" id="planner-date"></span><button onclick="changeDay(1)">▶</button></div><div class="card" id="planner-tasks"></div>';
   document.getElementById('rewards').innerHTML = '<div class="card"><div class="rewards-header"><h3>⭐ Stars Earned</h3><div class="stars-display">⭐ <span id="star-count">0</span></div></div><p style="font-size:0.8rem;color:var(--muted);">Earn stars by doing your daily learning!</p><div style="margin-top:12px;font-size:0.85rem;"><div>📖 Page memorized = <b>2⭐</b></div><div>🔁 Revision logged = <b>1⭐</b></div><div>📚 New word learned = <b>1⭐</b></div><div>✅ Task done = <b>1⭐</b></div><div>🏆 Juz complete = <b>20⭐</b></div><div>🔥 7-day streak = <b>20⭐</b></div></div></div><div class="card"><h3>🎁 Rewards Shop</h3><div id="rewards-shop"></div></div><div class="card"><h3>📜 History</h3><div class="reward-log" id="reward-log"></div></div><div class="card"><h3>➕ Add Custom Reward</h3><div class="routine-editor"><input id="new-reward-name" placeholder="Reward name"><input id="new-reward-cost" type="number" placeholder="Star cost"><button class="btn btn-gold" onclick="addReward()">Add Reward</button></div></div>';
@@ -296,6 +296,19 @@ function renderDashboard() {
   document.getElementById('today-summary').innerHTML = pending.length === 0
     ? `<p style="color:var(--ok);font-weight:600;">✅ All done! MashaAllah!</p>`
     : pending.slice(0,4).map(t => `<div class="check-item"><span class="time">${t.time}</span><label>${t.task}</label></div>`).join('');
+
+  // Word of the Day
+  const dashVocab = document.getElementById('dash-vocab');
+  if (dashVocab) {
+    const wod = (typeof getWordOfDay === 'function') ? getWordOfDay() : null;
+    const vMet = (typeof vocabLearnedToday === 'function') && vocabLearnedToday() >= (typeof VOCAB_DAILY_GOAL !== 'undefined' ? VOCAB_DAILY_GOAL : 1);
+    const vNudge = (typeof vocabLearnedToday === 'function')
+      ? `<div style="font-size:0.78rem;color:${vMet ? 'var(--ok)' : 'var(--muted)'};margin-top:6px;">${vMet ? '✅ Daily word learned' : '🎯 Learn a new word today'}</div>`
+      : '';
+    dashVocab.innerHTML = wod
+      ? `<div style="font-size:1.1rem;font-weight:700;color:var(--accent);">${esc(wod.word)}</div><div style="font-size:0.85rem;margin-top:2px;">${esc(wod.def)}</div>${wod.example ? `<div style="font-size:0.78rem;color:var(--muted);font-style:italic;margin-top:4px;">“${esc(wod.example)}”</div>` : ''}${vNudge}<div style="margin-top:8px;"><button class="btn btn-sm btn-primary" onclick="navTo('vocab')">Practice words →</button></div>`
+      : `<p style="font-size:0.85rem;color:var(--muted);">Add words in the Vocabulary tab.</p>`;
+  }
 
   // Needs Attention
   const issues = [];

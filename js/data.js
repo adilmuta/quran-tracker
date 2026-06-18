@@ -137,7 +137,7 @@ function seedSummerGoal() {
 }
 
 function applySeeds() {
-  try { seedJuz1Complete(); seedSummerGoal(); seedSummerGoalV2(); } catch (e) { console.log('applySeeds error', e); }
+  try { seedJuz1Complete(); seedSummerGoal(); seedSummerGoalV2(); if (typeof seedVocab === 'function') seedVocab(); } catch (e) { console.log('applySeeds error', e); }
 }
 
 // Re-scope to a sustainable summer pace (½ page x 5 days): finish Juz 2, into Juz 3.

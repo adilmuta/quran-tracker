@@ -199,10 +199,56 @@ const DEFAULT_VOCAB = [
   {word:'reluctant', def:'not wanting to do something', example:'She was reluctant to leave the party.', learned:false},
   {word:'summarize', def:'to tell the main points briefly', example:'Summarize the story in two sentences.', learned:false},
   {word:'vivid', def:'very bright and clear', example:'He has a vivid imagination.', learned:false},
-  {word:'wander', def:'to walk around without a clear plan', example:'We let the puppy wander in the yard.', learned:false}
+  {word:'wander', def:'to walk around without a clear plan', example:'We let the puppy wander in the yard.', learned:false},
+  // — Science —
+  {word:'habitat', def:'the natural home of an animal or plant', topic:'Science', example:'A pond is the frog\u2019s habitat.', learned:false},
+  {word:'evaporate', def:'to slowly turn from liquid into vapor', topic:'Science', example:'The puddle will evaporate in the sun.', learned:false},
+  {word:'organism', def:'any living thing', topic:'Science', example:'A bee is a tiny organism.', learned:false},
+  {word:'experiment', def:'a test to find out what happens', topic:'Science', example:'We did an experiment with magnets.', learned:false},
+  {word:'energy', def:'the power to do work or move', topic:'Science', example:'The sun gives us energy.', learned:false},
+  // — Math —
+  {word:'estimate', def:'to make a smart guess about an amount', topic:'Math', example:'Estimate how many jellybeans are in the jar.', learned:false},
+  {word:'equivalent', def:'equal in value', topic:'Math', example:'One half is equivalent to two quarters.', learned:false},
+  {word:'remainder', def:'the amount left over after dividing', topic:'Math', example:'10 divided by 3 has a remainder of 1.', learned:false},
+  {word:'perimeter', def:'the distance all the way around a shape', topic:'Math', example:'We measured the perimeter of the rug.', learned:false},
+  {word:'symmetry', def:'when both halves match exactly', topic:'Math', example:'A butterfly\u2019s wings show symmetry.', learned:false},
+  // — Social Studies —
+  {word:'community', def:'a group of people living in the same area', topic:'Social Studies', example:'Our community held a clean-up day.', learned:false},
+  {word:'government', def:'the group that makes rules for a place', topic:'Social Studies', example:'The government builds roads and schools.', learned:false},
+  {word:'culture', def:'the customs and beliefs of a group', topic:'Social Studies', example:'We learned about the culture of Japan.', learned:false},
+  {word:'region', def:'a large area of land with shared features', topic:'Social Studies', example:'The desert region is very dry.', learned:false},
+  {word:'citizen', def:'a member of a country or community', topic:'Social Studies', example:'A good citizen helps others.', learned:false},
+  // — Reading & Language —
+  {word:'compare', def:'to look at how things are alike', topic:'Reading', example:'Compare the two stories.', learned:false},
+  {word:'contrast', def:'to look at how things are different', topic:'Reading', example:'Contrast summer and winter.', learned:false},
+  {word:'describe', def:'to tell what something is like', topic:'Reading', example:'Describe your favorite place.', learned:false},
+  {word:'conclusion', def:'the ending or a decision you reach', topic:'Reading', example:'What is your conclusion about the ending?', learned:false},
+  {word:'opinion', def:'what you think or feel about something', topic:'Reading', example:'In my opinion, dogs are the best pets.', learned:false},
+  // — Character —
+  {word:'responsible', def:'doing what you are supposed to do', topic:'Character', example:'She is responsible and finishes her chores.', learned:false},
+  {word:'patient', def:'able to wait calmly', topic:'Character', example:'Be patient while the cake bakes.', learned:false},
+  {word:'honest', def:'telling the truth', topic:'Character', example:'An honest friend tells you the truth.', learned:false},
+  {word:'grateful', def:'thankful for what you have', topic:'Character', example:'I am grateful for my family.', learned:false},
+  {word:'determined', def:'not giving up on a goal', topic:'Character', example:'She was determined to learn the surah.', learned:false}
 ];
 
 function getVocab() { return load('vocab', DEFAULT_VOCAB.slice()); }
+
+const VOCAB_DAILY_GOAL = 1;  // new words to learn per day
+function vocabLearnedToday() {
+  const tk = dateKey(today());
+  return getVocab().filter(w => w.learnedDate === tk).length;
+}
+
+function getWordOfDay() {
+  const vocab = getVocab();
+  if (!vocab.length) return null;
+  const start = new Date(today().getFullYear(), 0, 0);
+  const doy = Math.floor((today() - start) / 86400000);
+  const pool = vocab.filter(w => !w.learned);
+  const src = pool.length ? pool : vocab;
+  return src[doy % src.length];
+}
 
 function renderVocab() {
   const vocab = getVocab();
@@ -210,11 +256,8 @@ function renderVocab() {
   const pct = vocab.length ? Math.round(learnedCount / vocab.length * 100) : 0;
 
   // Word of the day — deterministic by date; prefers an unlearned word
-  const start = new Date(today().getFullYear(), 0, 0);
-  const doy = Math.floor((today() - start) / 86400000);
   const pool = vocab.filter(w => !w.learned);
-  const src = pool.length ? pool : vocab;
-  const wod = src.length ? src[doy % src.length] : null;
+  const wod = getWordOfDay();
   document.getElementById('vocab-wod').innerHTML = wod ? `
     <div style="font-size:1.4rem;font-weight:700;">${esc(wod.word)}</div>
     <div style="font-size:0.9rem;margin-top:4px;">${esc(wod.def)}</div>
@@ -222,16 +265,19 @@ function renderVocab() {
     ${pool.length === 0 ? '<div style="font-size:0.8rem;margin-top:8px;">🎉 All words learned! Add more below.</div>' : ''}`
     : '<p style="opacity:0.9;">Add some words below to get started!</p>';
 
+  const learnedTodayN = vocabLearnedToday();
+  const todayMet = learnedTodayN >= VOCAB_DAILY_GOAL;
   document.getElementById('vocab-progress').innerHTML = `
     <div style="display:flex;justify-content:space-between;font-size:0.85rem;"><span>${learnedCount}/${vocab.length} words learned</span><span>${pct}%</span></div>
-    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>`;
+    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+    <div style="font-size:0.8rem;color:${todayMet ? 'var(--ok)' : 'var(--muted)'};margin-top:8px;">${todayMet ? '✅ Today\u2019s goal done' : '🎯 Today\u2019s goal'}: ${learnedTodayN}/${VOCAB_DAILY_GOAL} new word${VOCAB_DAILY_GOAL > 1 ? 's' : ''}${todayMet ? ' — mashaAllah!' : ''}</div>`;
 
   document.getElementById('vocab-list').innerHTML = vocab.length === 0
     ? '<p style="color:var(--muted);font-size:0.85rem;">No words yet. Add one below.</p>'
     : vocab.map((w, i) => `
       <div style="padding:10px 0;border-bottom:1px solid var(--border);">
         <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-weight:600;font-size:0.95rem;flex:1;${w.learned ? 'color:var(--ok);' : ''}">${esc(w.word)}${w.learned ? ' ✅' : ''}</span>
+          <span style="font-weight:600;font-size:0.95rem;flex:1;${w.learned ? 'color:var(--ok);' : ''}">${esc(w.word)}${w.learned ? ' ✅' : ''}${w.topic ? ` <span style="font-size:0.65rem;font-weight:500;background:var(--bg);border:1px solid var(--border);color:var(--muted);padding:1px 6px;border-radius:10px;">${esc(w.topic)}</span>` : ''}</span>
           <button class="btn btn-sm ${w.learned ? 'btn-primary' : ''}" style="border:1px solid var(--border);${w.learned ? '' : 'background:var(--bg);color:var(--text);'}" onclick="toggleWord(${i})">${w.learned ? 'Learned' : 'Mark learned'}</button>
           <button class="btn btn-sm btn-danger" onclick="removeWord(${i})">✕</button>
         </div>
@@ -244,8 +290,16 @@ function toggleWord(i) {
   const vocab = getVocab();
   const was = vocab[i].learned;
   vocab[i].learned = !was;
+  if (!was) vocab[i].learnedDate = dateKey(today()); else delete vocab[i].learnedDate;
   save('vocab', vocab);
-  if (!was && typeof addStars === 'function') addStars(1, `Learned word: ${vocab[i].word}`);
+  if (!was) {
+    if (typeof addStars === 'function') addStars(1, `Learned word: ${vocab[i].word}`);
+    const goalKey = 'vocab_goal_' + dateKey(today());
+    if (vocabLearnedToday() >= VOCAB_DAILY_GOAL && !load(goalKey, 0)) {
+      save(goalKey, 1);
+      if (typeof addStars === 'function') addStars(3, '📚 Daily vocab goal met!');
+    }
+  }
   if (typeof checkBadges === 'function') checkBadges();
   renderVocab();
 }
@@ -269,4 +323,17 @@ function removeWord(i) {
   vocab.splice(i, 1);
   save('vocab', vocab);
   renderVocab();
+}
+
+// Merge any new starter words into an existing saved vocab list (idempotent).
+function seedVocab() {
+  if (localStorage.getItem('_seed_vocab_v2')) return;
+  const existing = load('vocab', null);
+  if (existing && Array.isArray(existing)) {
+    const have = new Set(existing.map(w => (w.word || '').toLowerCase()));
+    let added = 0;
+    DEFAULT_VOCAB.forEach(w => { if (!have.has(w.word.toLowerCase())) { existing.push({ ...w }); added++; } });
+    if (added) save('vocab', existing);
+  }
+  localStorage.setItem('_seed_vocab_v2', '1');
 }
