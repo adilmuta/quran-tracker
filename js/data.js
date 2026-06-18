@@ -8,9 +8,10 @@ const EXAM_DATE = new Date('2026-06-02'); // (legacy) Juz 26-28 exam — passed
 
 // === MEMORIZATION (15-line Madani mushaf: 20 pages per juz) ===
 const PAGES_PER_JUZ = 20;
-const ACTIVE_JUZ = [1, 2, 3, 4, 5];          // current memorization focus (summer goal)
-const GOAL_DATE = new Date('2026-09-12');    // summer goal: finish Juz 2-5
-const GOAL_LABEL = 'days until summer goal (Juz 2-5)';
+const ACTIVE_JUZ = [1, 2, 3];                // Juz 1 done; working on Juz 2-3 this summer
+const GOAL_DATE = new Date('2026-09-12');    // summer goal: finish Juz 2, well into Juz 3
+const GOAL_LABEL = 'days until summer goal (Juz 2 + into Juz 3)';
+const DAILY_SABAQ = '½ page · ~7-8 lines · 5 days/week';  // sustainable summer pace
 
 // Per-juz page progress, stored as { juzNum: [pageNumbers...] }
 function getJuzPages() { return load('juz_pages', {}); }
@@ -19,10 +20,12 @@ function togglePage(j, page) {
   const m = getJuzPages();
   const arr = m[j] || [];
   const i = arr.indexOf(page);
-  if (i >= 0) arr.splice(i, 1); else arr.push(page);
+  const wasDone = i >= 0;
+  if (wasDone) arr.splice(i, 1); else arr.push(page);
   arr.sort((a, b) => a - b);
   m[j] = arr;
   save('juz_pages', m);
+  if (!wasDone && typeof addStars === 'function') addStars(2, `Memorized Juz ${j} p.${page}`);
   syncJuzStatusFromPages(j);
   renderQuran();
 }
@@ -134,5 +137,22 @@ function seedSummerGoal() {
 }
 
 function applySeeds() {
-  try { seedJuz1Complete(); seedSummerGoal(); } catch (e) { console.log('applySeeds error', e); }
+  try { seedJuz1Complete(); seedSummerGoal(); seedSummerGoalV2(); } catch (e) { console.log('applySeeds error', e); }
+}
+
+// Re-scope to a sustainable summer pace (½ page x 5 days): finish Juz 2, into Juz 3.
+function seedSummerGoalV2() {
+  if (localStorage.getItem('_seed_summer_goal_v2')) return;
+  let goals = load('goals', DEFAULT_GOALS.slice());
+  // Remove the old over-ambitious Juz 2-5 milestone set
+  goals = goals.filter(g => !/complete juz 2-5|juz 2 memorized|juz 3 memorized|juz 4 memorized|juz 5 memorized/i.test(g.name));
+  goals.forEach(g => { if (/juz\s*1\b/i.test(g.name)) g.done = true; });
+  if (!goals.some(g => /finish juz 2/i.test(g.name))) {
+    goals.push(
+      { name:'Finish Juz 2', date:'2026-08-14', done:false },
+      { name:'Into Juz 3 — 10+ pages', date:'2026-09-12', done:false }
+    );
+  }
+  save('goals', goals);
+  localStorage.setItem('_seed_summer_goal_v2', '1');
 }

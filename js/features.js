@@ -2,6 +2,7 @@ function initFeaturesHTML() {
   document.getElementById('juzmap').innerHTML = '<div class="card"><h3>🗺️ Juz Progress Map</h3><p style="font-size:0.8rem;color:var(--muted);margin-bottom:12px;">Tap a juz to cycle: Not Started → In Progress → Complete</p><div id="juz-grid"></div><div style="margin-top:12px;font-size:0.75rem;color:var(--muted);">🟢 Complete & healthy · 🟡 Needs revision · 🔴 Missed recently · ⬜ Not started · 🔵 In progress</div></div>';
   document.getElementById('goals').innerHTML = '<div class="card"><h3>🎯 Active Goals</h3><div id="goals-list"></div></div><div class="card"><h3>➕ New Goal</h3><div class="routine-editor"><input id="goal-name" placeholder="Goal (e.g. Complete Juz 1)"><input id="goal-date" type="date"><button class="btn btn-primary" onclick="addGoal()">Add Goal</button></div></div>';
   document.getElementById('badges').innerHTML = '<div class="card"><h3>🏆 Achievement Badges</h3><div id="badges-grid"></div></div>';
+  document.getElementById('vocab').innerHTML = '<div class="card" style="background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;"><h3 style="color:#fff;">📚 Word of the Day</h3><div id="vocab-wod"></div></div><div class="card"><h3>📊 Vocabulary Progress</h3><div id="vocab-progress"></div></div><div class="card"><h3>📖 Word List</h3><div id="vocab-list"></div></div><div class="card"><h3>➕ Add Word</h3><div class="routine-editor"><input id="vocab-word" placeholder="Word"><input id="vocab-def" placeholder="Meaning (kid-friendly)"><input id="vocab-ex" placeholder="Example sentence (optional)"><button class="btn btn-primary" onclick="addWord()">Add Word</button></div></div>';
 }
 
 // === JUZ MAP ===
@@ -143,6 +144,7 @@ const BADGE_DEFS = [
   {id:'juz_20',name:'Two-Thirds',icon:'👑',desc:'Completed 20 juz',check:()=>{const s=getJuzStatus();return Object.values(s).filter(v=>v==='complete').length>=20;}},
   {id:'juz_30',name:'Hafidha!',icon:'🕋',desc:'Completed all 30 juz!',check:()=>{const s=getJuzStatus();return Object.values(s).filter(v=>v==='complete').length>=30;}},
   {id:'goal_1',name:'Goal Getter',icon:'🎯',desc:'Completed first goal',check:()=>getGoals().some(g=>g.done)},
+  {id:'words_10',name:'Word Wizard',icon:'🔤',desc:'Learned 10 new words',check:()=>load('vocab',[]).filter(w=>w.learned).length>=10},
   {id:'stars_50',name:'Star Collector',icon:'⭐',desc:'Earned 50 stars',check:()=>getStars()>=50},
   {id:'stars_200',name:'Star Master',icon:'🌠',desc:'Earned 200 stars',check:()=>getStars()>=200},
   {id:'perfect_week',name:'Perfect Week',icon:'🏆',desc:'All tasks done for 7 days straight',check:()=>load('streak',0)>=7},
@@ -175,3 +177,96 @@ function renderBadges() {
     }).join('') + '</div>';
 }
 
+
+// === VOCABULARY (4th-grade prep) ===
+const DEFAULT_VOCAB = [
+  {word:'accomplish', def:'to finish or succeed at something', example:'She worked hard to accomplish her goal.', learned:false},
+  {word:'ancient', def:'very, very old; from long ago', example:'We read about ancient Egypt.', learned:false},
+  {word:'brief', def:'short; not lasting long', example:'He gave a brief answer.', learned:false},
+  {word:'cooperate', def:'to work together with others', example:'The team had to cooperate to win.', learned:false},
+  {word:'curious', def:'wanting to learn or know more', example:'She was curious about how it worked.', learned:false},
+  {word:'demonstrate', def:'to show how something works', example:'The teacher will demonstrate the experiment.', learned:false},
+  {word:'eager', def:'really wanting to do something', example:'He was eager to start the game.', learned:false},
+  {word:'enormous', def:'very, very big', example:'The whale was enormous.', learned:false},
+  {word:'fortunate', def:'lucky', example:'We were fortunate to have good weather.', learned:false},
+  {word:'frequent', def:'happening often', example:'There are frequent buses on this road.', learned:false},
+  {word:'generous', def:'happy to share and give', example:'She is generous with her toys.', learned:false},
+  {word:'identify', def:'to point out or name something', example:'Can you identify this bird?', learned:false},
+  {word:'observe', def:'to watch carefully', example:'We observe the moon at night.', learned:false},
+  {word:'peculiar', def:'strange or unusual', example:'The soup had a peculiar taste.', learned:false},
+  {word:'persuade', def:'to convince someone to do something', example:'He tried to persuade me to come.', learned:false},
+  {word:'predict', def:'to guess what will happen next', example:'Can you predict the ending?', learned:false},
+  {word:'reluctant', def:'not wanting to do something', example:'She was reluctant to leave the party.', learned:false},
+  {word:'summarize', def:'to tell the main points briefly', example:'Summarize the story in two sentences.', learned:false},
+  {word:'vivid', def:'very bright and clear', example:'He has a vivid imagination.', learned:false},
+  {word:'wander', def:'to walk around without a clear plan', example:'We let the puppy wander in the yard.', learned:false}
+];
+
+function getVocab() { return load('vocab', DEFAULT_VOCAB.slice()); }
+
+function renderVocab() {
+  const vocab = getVocab();
+  const learnedCount = vocab.filter(w => w.learned).length;
+  const pct = vocab.length ? Math.round(learnedCount / vocab.length * 100) : 0;
+
+  // Word of the day — deterministic by date; prefers an unlearned word
+  const start = new Date(today().getFullYear(), 0, 0);
+  const doy = Math.floor((today() - start) / 86400000);
+  const pool = vocab.filter(w => !w.learned);
+  const src = pool.length ? pool : vocab;
+  const wod = src.length ? src[doy % src.length] : null;
+  document.getElementById('vocab-wod').innerHTML = wod ? `
+    <div style="font-size:1.4rem;font-weight:700;">${esc(wod.word)}</div>
+    <div style="font-size:0.9rem;margin-top:4px;">${esc(wod.def)}</div>
+    ${wod.example ? `<div style="font-size:0.82rem;opacity:0.9;margin-top:6px;font-style:italic;">“${esc(wod.example)}”</div>` : ''}
+    ${pool.length === 0 ? '<div style="font-size:0.8rem;margin-top:8px;">🎉 All words learned! Add more below.</div>' : ''}`
+    : '<p style="opacity:0.9;">Add some words below to get started!</p>';
+
+  document.getElementById('vocab-progress').innerHTML = `
+    <div style="display:flex;justify-content:space-between;font-size:0.85rem;"><span>${learnedCount}/${vocab.length} words learned</span><span>${pct}%</span></div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>`;
+
+  document.getElementById('vocab-list').innerHTML = vocab.length === 0
+    ? '<p style="color:var(--muted);font-size:0.85rem;">No words yet. Add one below.</p>'
+    : vocab.map((w, i) => `
+      <div style="padding:10px 0;border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-weight:600;font-size:0.95rem;flex:1;${w.learned ? 'color:var(--ok);' : ''}">${esc(w.word)}${w.learned ? ' ✅' : ''}</span>
+          <button class="btn btn-sm ${w.learned ? 'btn-primary' : ''}" style="border:1px solid var(--border);${w.learned ? '' : 'background:var(--bg);color:var(--text);'}" onclick="toggleWord(${i})">${w.learned ? 'Learned' : 'Mark learned'}</button>
+          <button class="btn btn-sm btn-danger" onclick="removeWord(${i})">✕</button>
+        </div>
+        <div style="font-size:0.82rem;color:var(--muted);margin-top:2px;">${esc(w.def)}</div>
+        ${w.example ? `<div style="font-size:0.78rem;color:var(--muted);font-style:italic;margin-top:2px;">“${esc(w.example)}”</div>` : ''}
+      </div>`).join('');
+}
+
+function toggleWord(i) {
+  const vocab = getVocab();
+  const was = vocab[i].learned;
+  vocab[i].learned = !was;
+  save('vocab', vocab);
+  if (!was && typeof addStars === 'function') addStars(1, `Learned word: ${vocab[i].word}`);
+  if (typeof checkBadges === 'function') checkBadges();
+  renderVocab();
+}
+
+function addWord() {
+  const word = document.getElementById('vocab-word').value.trim();
+  const def = document.getElementById('vocab-def').value.trim();
+  const example = document.getElementById('vocab-ex').value.trim();
+  if (!word || !def) return;
+  const vocab = getVocab();
+  vocab.push({word, def, example, learned: false});
+  save('vocab', vocab);
+  document.getElementById('vocab-word').value = '';
+  document.getElementById('vocab-def').value = '';
+  document.getElementById('vocab-ex').value = '';
+  renderVocab();
+}
+
+function removeWord(i) {
+  const vocab = getVocab();
+  vocab.splice(i, 1);
+  save('vocab', vocab);
+  renderVocab();
+}

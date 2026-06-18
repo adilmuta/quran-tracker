@@ -223,6 +223,7 @@ function navTo(id) {
   if (id==='quran') renderQuran();
   if (id==='planner') renderPlanner();
   if (id==='academics') renderAcademics();
+  if (id==='vocab') renderVocab();
   if (id==='goals') renderGoals();
   if (id==='badges') renderBadges();
   if (id==='weekly') renderWeekly();

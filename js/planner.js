@@ -3,7 +3,7 @@ function initTabHTML() {
   document.getElementById('dashboard').innerHTML = '<div class="countdown" id="countdown"></div><div class="streak" id="streak"></div><div class="stats" id="stats"></div><div class="card" id="needs-attention"></div><div class="card"><h3>📋 Next Up</h3><div id="today-summary"></div></div>';
   document.getElementById('quran').innerHTML = '<div class="card"><h3>📖 Memorization Progress</h3><p style="font-size:0.8rem;color:var(--muted);margin-bottom:10px;">15-line Madani mushaf · 20 pages per juz · tap a page to mark it memorized</p><div id="juz-pages"></div></div><div class="card"><h3>📝 Today\'s Revision</h3><div id="exam-log"></div></div>';
   document.getElementById('planner').innerHTML = '<div class="day-nav"><button onclick="changeDay(-1)">◀</button><span class="date" id="planner-date"></span><button onclick="changeDay(1)">▶</button></div><div class="card" id="planner-tasks"></div>';
-  document.getElementById('rewards').innerHTML = '<div class="card"><div class="rewards-header"><h3>⭐ Stars Earned</h3><div class="stars-display">⭐ <span id="star-count">0</span></div></div><p style="font-size:0.8rem;color:var(--muted);">Earn stars by completing tasks & surahs.</p><div style="margin-top:12px;font-size:0.85rem;"><div>✅ Task = <b>1⭐</b></div><div>📖 Surah = <b>3⭐</b></div><div>🔥 All tasks = <b>5⭐</b></div><div>📅 7-day streak = <b>20⭐</b></div></div></div><div class="card"><h3>🎁 Rewards Shop</h3><div id="rewards-shop"></div></div><div class="card"><h3>📜 History</h3><div class="reward-log" id="reward-log"></div></div><div class="card"><h3>➕ Add Custom Reward</h3><div class="routine-editor"><input id="new-reward-name" placeholder="Reward name"><input id="new-reward-cost" type="number" placeholder="Star cost"><button class="btn btn-gold" onclick="addReward()">Add Reward</button></div></div>';
+  document.getElementById('rewards').innerHTML = '<div class="card"><div class="rewards-header"><h3>⭐ Stars Earned</h3><div class="stars-display">⭐ <span id="star-count">0</span></div></div><p style="font-size:0.8rem;color:var(--muted);">Earn stars by doing your daily learning!</p><div style="margin-top:12px;font-size:0.85rem;"><div>📖 Page memorized = <b>2⭐</b></div><div>🔁 Revision logged = <b>1⭐</b></div><div>📚 New word learned = <b>1⭐</b></div><div>✅ Task done = <b>1⭐</b></div><div>🏆 Juz complete = <b>20⭐</b></div><div>🔥 7-day streak = <b>20⭐</b></div></div></div><div class="card"><h3>🎁 Rewards Shop</h3><div id="rewards-shop"></div></div><div class="card"><h3>📜 History</h3><div class="reward-log" id="reward-log"></div></div><div class="card"><h3>➕ Add Custom Reward</h3><div class="routine-editor"><input id="new-reward-name" placeholder="Reward name"><input id="new-reward-cost" type="number" placeholder="Star cost"><button class="btn btn-gold" onclick="addReward()">Add Reward</button></div></div>';
   document.getElementById('routine').innerHTML = '<div class="card"><h3>⚙️ Daily Routine</h3><p style="font-size:0.8rem;color:var(--muted);margin-bottom:12px;">Default schedule generated each day.</p><div id="routine-list"></div><div class="routine-editor"><input id="new-time" type="time"><input id="new-task" type="text" placeholder="Task name"><button class="btn btn-primary" onclick="addRoutineItem()">+ Add</button></div></div><div class="card"><h3>🔐 Change PIN</h3><button class="btn btn-primary" onclick="changePin()">Change PIN</button></div><div class="card"><h3>🗑️ Reset All Data</h3><button class="btn btn-danger" onclick="if(confirm(\'Reset ALL data?\')){localStorage.clear();location.reload();}">Reset</button></div>';
 }
 
@@ -49,7 +49,8 @@ function renderQuran() {
   const totalPct = totalPages ? Math.round(donePages / totalPages * 100) : 0;
   document.getElementById('juz-pages').innerHTML =
     `<div style="display:flex;justify-content:space-between;font-size:0.85rem;"><span>${donePages}/${totalPages} pages</span><span>${totalPct}%</span></div>
-     <div class="progress-bar" style="margin:4px 0 16px;"><div class="progress-fill" style="width:${totalPct}%"></div></div>${cards}`;
+     <div class="progress-bar" style="margin:4px 0 10px;"><div class="progress-fill" style="width:${totalPct}%"></div></div>
+     <div style="font-size:0.78rem;color:var(--muted);margin-bottom:14px;">🎯 Daily sabaq target: <b>${DAILY_SABAQ}</b></div>${cards}`;
 
   // === Today's revision log (multiple entries per day) ===
   const status = (typeof getJuzStatus === 'function') ? getJuzStatus() : {};
@@ -131,6 +132,7 @@ function addRevision() {
   const arr = getRevisions(today());
   arr.push({juz, pages, confidence, notes, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})});
   save(key, arr);
+  if (typeof addStars === 'function') addStars(1, 'Revision logged');
   renderQuran();
 }
 function removeRevision(i) {
