@@ -212,11 +212,10 @@ function navTo(id) {
 
   document.querySelectorAll('.tab-content').forEach(e => e.classList.add('hidden'));
   document.getElementById(id).classList.remove('hidden');
-  document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active'));
-  const navItems = document.querySelectorAll('.nav-item');
-  if (id==='dashboard') navItems[0].classList.add('active');
-  else if (id==='hifdh') navItems[1].classList.add('active');
-  else if (id==='rewards') navItems[2].classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(el => {
+    const t = el.getAttribute('onclick')?.match(/navTo\('(\w+)'\)/)?.[1];
+    el.classList.toggle('active', t === id);
+  });
   closeMenu();
   if (id==='dashboard') renderDashboard();
   if (id==='hifdh') renderHifdh();
