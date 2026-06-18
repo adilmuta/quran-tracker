@@ -1,7 +1,7 @@
 // Tab HTML setup
 function initTabHTML() {
   document.getElementById('dashboard').innerHTML = '<div class="countdown" id="countdown"></div><div class="streak" id="streak"></div><div class="stats" id="stats"></div><div class="card" id="needs-attention"></div><div class="card"><h3>📋 Next Up</h3><div id="today-summary"></div></div>';
-  document.getElementById('quran').innerHTML = '<div class="card"><h3>📊 Progress</h3><div id="quran-progress"></div></div><div class="card"><h3>📝 Today\'s Exam Revision</h3><div id="exam-log"></div></div><div class="section-title">Juz 28</div><div class="card"><div class="surah-grid" id="juz28"></div></div><div class="section-title">Juz 27</div><div class="card"><div class="surah-grid" id="juz27"></div></div><div class="section-title">Juz 26</div><div class="card"><div class="surah-grid" id="juz26"></div></div>';
+  document.getElementById('quran').innerHTML = '<div class="card"><h3>📖 Memorization Progress</h3><p style="font-size:0.8rem;color:var(--muted);margin-bottom:10px;">15-line Madani mushaf · 20 pages per juz · tap a page to mark it memorized</p><div id="juz-pages"></div></div><div class="card"><h3>📝 Today\'s Revision</h3><div id="exam-log"></div></div>';
   document.getElementById('planner').innerHTML = '<div class="day-nav"><button onclick="changeDay(-1)">◀</button><span class="date" id="planner-date"></span><button onclick="changeDay(1)">▶</button></div><div class="card" id="planner-tasks"></div>';
   document.getElementById('rewards').innerHTML = '<div class="card"><div class="rewards-header"><h3>⭐ Stars Earned</h3><div class="stars-display">⭐ <span id="star-count">0</span></div></div><p style="font-size:0.8rem;color:var(--muted);">Earn stars by completing tasks & surahs.</p><div style="margin-top:12px;font-size:0.85rem;"><div>✅ Task = <b>1⭐</b></div><div>📖 Surah = <b>3⭐</b></div><div>🔥 All tasks = <b>5⭐</b></div><div>📅 7-day streak = <b>20⭐</b></div></div></div><div class="card"><h3>🎁 Rewards Shop</h3><div id="rewards-shop"></div></div><div class="card"><h3>📜 History</h3><div class="reward-log" id="reward-log"></div></div><div class="card"><h3>➕ Add Custom Reward</h3><div class="routine-editor"><input id="new-reward-name" placeholder="Reward name"><input id="new-reward-cost" type="number" placeholder="Star cost"><button class="btn btn-gold" onclick="addReward()">Add Reward</button></div></div>';
   document.getElementById('routine').innerHTML = '<div class="card"><h3>⚙️ Daily Routine</h3><p style="font-size:0.8rem;color:var(--muted);margin-bottom:12px;">Default schedule generated each day.</p><div id="routine-list"></div><div class="routine-editor"><input id="new-time" type="time"><input id="new-task" type="text" placeholder="Task name"><button class="btn btn-primary" onclick="addRoutineItem()">+ Add</button></div></div><div class="card"><h3>🔐 Change PIN</h3><button class="btn btn-primary" onclick="changePin()">Change PIN</button></div><div class="card"><h3>🗑️ Reset All Data</h3><button class="btn btn-danger" onclick="if(confirm(\'Reset ALL data?\')){localStorage.clear();location.reload();}">Reset</button></div>';
@@ -28,44 +28,51 @@ function celebrate() {
 
 // === QURAN ===
 function renderQuran() {
-  let total = 0, done = 0;
-  ['juz28','juz27','juz26'].forEach(juz => {
-    const el = document.getElementById(juz);
-    const progress = load('surah_' + juz, {});
-    el.innerHTML = SURAHS[juz].map(s => {
-      total++;
-      const checked = progress[s.n] || false;
-      if (checked) done++;
-      return `<div class="surah-item ${checked?'complete':''}">
-        <input type="checkbox" ${checked?'checked':''} onchange="toggleSurah('${juz}',${s.n},this.checked)">
-        <span>${s.n}. ${s.name}</span></div>`;
+  // === Page-based memorization tracker (15-line Madani: 20 pages/juz) ===
+  const pages = getJuzPages();
+  let totalPages = 0, donePages = 0;
+  const cards = ACTIVE_JUZ.map(j => {
+    const done = new Set(pages[j] || []);
+    donePages += done.size; totalPages += PAGES_PER_JUZ;
+    const cells = Array.from({length: PAGES_PER_JUZ}, (_, i) => {
+      const p = i + 1;
+      return `<div class="page-cell ${done.has(p) ? 'done' : ''}" onclick="togglePage(${j},${p})">${p}</div>`;
     }).join('');
-  });
-  const pct = total ? Math.round(done/total*100) : 0;
-  document.getElementById('quran-progress').innerHTML = `
-    <div style="display:flex;justify-content:space-between;font-size:0.85rem;"><span>${done}/${total} surahs</span><span>${pct}%</span></div>
-    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>`;
+    const pct = Math.round(done.size / PAGES_PER_JUZ * 100);
+    const complete = done.size >= PAGES_PER_JUZ;
+    return `<div class="juz-block ${complete ? 'complete' : ''}">
+      <div class="juz-head"><span>Juz ${j}${complete ? ' ✅' : ''}</span><span>${done.size}/${PAGES_PER_JUZ} pages</span></div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+      <div class="page-grid">${cells}</div>
+    </div>`;
+  }).join('');
+  const totalPct = totalPages ? Math.round(donePages / totalPages * 100) : 0;
+  document.getElementById('juz-pages').innerHTML =
+    `<div style="display:flex;justify-content:space-between;font-size:0.85rem;"><span>${donePages}/${totalPages} pages</span><span>${totalPct}%</span></div>
+     <div class="progress-bar" style="margin:4px 0 16px;"><div class="progress-fill" style="width:${totalPct}%"></div></div>${cards}`;
 
-  // Daily exam revision log
+  // === Today's revision log (juz list derived from completed juz) ===
   const examLog = load('exam_' + dateKey(today()), {juz:'',pages:'',confidence:'',notes:''});
+  const status = (typeof getJuzStatus === 'function') ? getJuzStatus() : {};
+  let juzList = Object.keys(status).filter(j => status[j] === 'complete').map(Number);
+  if (juzList.length === 0) juzList = ACTIVE_JUZ.slice();
+  juzList.sort((a, b) => a - b);
+  const juzOpts = juzList.map(j => `<option value="${j}" ${examLog.juz === String(j) ? 'selected' : ''}>Juz ${j}</option>`).join('');
   document.getElementById('exam-log').innerHTML = `
     <div style="display:flex;gap:6px;margin-bottom:8px;">
       <select style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem;" onchange="updateExamLog('juz',this.value)">
-        <option value="">Which Juz?</option>
-        <option value="26" ${examLog.juz==='26'?'selected':''}>Juz 26</option>
-        <option value="27" ${examLog.juz==='27'?'selected':''}>Juz 27</option>
-        <option value="28" ${examLog.juz==='28'?'selected':''}>Juz 28</option>
-        <option value="all" ${examLog.juz==='all'?'selected':''}>All 3</option>
+        <option value="">Which Juz?</option>${juzOpts}
+        <option value="all" ${examLog.juz === 'all' ? 'selected' : ''}>All</option>
       </select>
-      <input style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem;" placeholder="Pages/surahs covered" value="${esc(examLog.pages||'')}" onchange="updateExamLog('pages',this.value)">
+      <input style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem;" placeholder="Pages covered" value="${esc(examLog.pages || '')}" onchange="updateExamLog('pages',this.value)">
     </div>
     <div style="display:flex;gap:6px;margin-bottom:8px;">
       ${['😟 Struggling','😐 OK','😊 Good','🤩 Confident'].map(c => {
         const val = c.split(' ')[1];
-        return `<button class="btn btn-sm" style="flex:1;border:1px solid var(--border);${examLog.confidence===val?'background:var(--accent);color:white;':'background:var(--bg);color:var(--text);'}" onclick="updateExamLog('confidence','${val}');renderQuran();">${c}</button>`;
+        return `<button class="btn btn-sm" style="flex:1;border:1px solid var(--border);${examLog.confidence === val ? 'background:var(--accent);color:white;' : 'background:var(--bg);color:var(--text);'}" onclick="updateExamLog('confidence','${val}');renderQuran();">${c}</button>`;
       }).join('')}
     </div>
-    <textarea style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem;min-height:40px;" placeholder="Weak spots, mistakes, focus for tomorrow..." onchange="updateExamLog('notes',this.value)">${esc(examLog.notes||'')}</textarea>`;
+    <textarea style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem;min-height:40px;" placeholder="Weak spots, mistakes, focus for tomorrow..." onchange="updateExamLog('notes',this.value)">${esc(examLog.notes || '')}</textarea>`;
 }
 
 function updateExamLog(field, value) {
@@ -207,21 +214,23 @@ function updateStreak() {
 
 // === DASHBOARD ===
 function renderDashboard() {
-  const daysLeft = Math.max(0, Math.ceil((EXAM_DATE - today()) / 86400000));
+  const daysLeft = Math.max(0, Math.ceil((GOAL_DATE - today()) / 86400000));
   document.getElementById('countdown').innerHTML = daysLeft > 0
-    ? `<div class="days">${daysLeft}</div><div class="label">days until exam</div>`
-    : `<div class="days">🎯</div><div class="label">Exam time! بالتوفيق</div>`;
+    ? `<div class="days">${daysLeft}</div><div class="label">${GOAL_LABEL}</div>`
+    : `<div class="days">🎯</div><div class="label">Goal time! بالتوفيق</div>`;
   updateStreak();
   const streak = load('streak', 0);
   document.getElementById('streak').innerHTML = `<span class="fire">🔥</span><span class="count">${streak}</span><span>day streak</span><span style="margin-left:auto;">⭐ ${getStars()}</span>`;
-  let totalS = 0, doneS = 0;
-  ['juz28','juz27','juz26'].forEach(juz => { const p = load('surah_'+juz,{}); SURAHS[juz].forEach(s => { totalS++; if(p[s.n]) doneS++; }); });
+  const pages = getJuzPages();
+  let donePages = 0; const totalPages = ACTIVE_JUZ.length * PAGES_PER_JUZ;
+  ACTIVE_JUZ.forEach(j => donePages += (pages[j] || []).length);
+  const juzDone = (typeof getJuzStatus === 'function') ? Object.values(getJuzStatus()).filter(v => v === 'complete').length : 0;
   const todayTasks = getDayTasks(today());
   const todayDone = todayTasks.filter(t => t.done).length;
   document.getElementById('stats').innerHTML = `
-    <div class="stat"><div class="num">${doneS}/${totalS}</div><div class="label">Surahs</div></div>
+    <div class="stat"><div class="num">${donePages}/${totalPages}</div><div class="label">Pages</div></div>
     <div class="stat"><div class="num">${todayDone}/${todayTasks.length}</div><div class="label">Today</div></div>
-    <div class="stat"><div class="num">${Math.round(doneS/totalS*100)}%</div><div class="label">Quran</div></div>`;
+    <div class="stat"><div class="num">${juzDone}</div><div class="label">Juz ✓</div></div>`;
   const pending = todayTasks.filter(t => !t.done);
   document.getElementById('today-summary').innerHTML = pending.length === 0
     ? `<p style="color:var(--ok);font-weight:600;">✅ All done! MashaAllah!</p>`

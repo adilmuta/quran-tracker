@@ -4,7 +4,39 @@ const SURAHS = {
   juz27: [{n:52,name:"At-Tur"},{n:53,name:"An-Najm"},{n:54,name:"Al-Qamar"},{n:55,name:"Ar-Rahman"},{n:56,name:"Al-Waqi'ah"},{n:57,name:"Al-Hadid"}],
   juz26: [{n:46,name:"Al-Ahqaf"},{n:47,name:"Muhammad"},{n:48,name:"Al-Fath"},{n:49,name:"Al-Hujurat"},{n:50,name:"Qaf"},{n:51,name:"Adh-Dhariyat"}]
 };
-const EXAM_DATE = new Date('2026-06-02');
+const EXAM_DATE = new Date('2026-06-02'); // (legacy) Juz 26-28 exam — passed
+
+// === MEMORIZATION (15-line Madani mushaf: 20 pages per juz) ===
+const PAGES_PER_JUZ = 20;
+const ACTIVE_JUZ = [1, 2, 3, 4, 5];          // current memorization focus (summer goal)
+const GOAL_DATE = new Date('2026-09-12');    // summer goal: finish Juz 2-5
+const GOAL_LABEL = 'days until summer goal (Juz 2-5)';
+
+// Per-juz page progress, stored as { juzNum: [pageNumbers...] }
+function getJuzPages() { return load('juz_pages', {}); }
+function juzPagesDone(j) { return (getJuzPages()[j] || []).length; }
+function togglePage(j, page) {
+  const m = getJuzPages();
+  const arr = m[j] || [];
+  const i = arr.indexOf(page);
+  if (i >= 0) arr.splice(i, 1); else arr.push(page);
+  arr.sort((a, b) => a - b);
+  m[j] = arr;
+  save('juz_pages', m);
+  syncJuzStatusFromPages(j);
+  renderQuran();
+}
+function syncJuzStatusFromPages(j) {
+  const n = juzPagesDone(j);
+  const status = load('juz_status', {});
+  const prev = status[j];
+  status[j] = n >= PAGES_PER_JUZ ? 'complete' : n > 0 ? 'in_progress' : 'not_started';
+  save('juz_status', status);
+  if (prev !== 'complete' && status[j] === 'complete' && typeof addStars === 'function') {
+    addStars(20, `Juz ${j} complete! 🎉`);
+  }
+  if (typeof checkBadges === 'function') checkBadges();
+}
 const DEFAULT_ROUTINE = [
   {time:"06:00",task:"Fajr & Morning Adhkar"},
   {time:"06:30",task:"Quran Revision — Morning (45 min)"},
@@ -28,6 +60,10 @@ const DEFAULT_REWARDS = [
   {name:"Choose dinner 🍕", cost: 20},
   {name:"New book / toy 📚", cost: 50},
   {name:"Day trip / outing 🎢", cost: 100}
+];
+const DEFAULT_GOALS = [
+  {name:'Complete Juz 1', date:'2026-06-01', done:false},
+  {name:'Pass Juz 26-28 exam', date:'2026-06-02', done:false}
 ];
 
 // === HELPERS ===
@@ -60,3 +96,43 @@ function migrateLocalDateKeys() {
   localStorage.setItem('_migrated_datekeys', '1');
 }
 migrateLocalDateKeys();
+
+// === ONE-TIME SEEDS (idempotent) ===
+// Called by applySeeds() AFTER data is loaded (Firestore or PIN path), so they
+// run against the user's real data and then sync back to Firestore via save().
+
+// Shireen finished Juz 1 over the school year but never logged it — seed it complete.
+function seedJuz1Complete() {
+  if (localStorage.getItem('_seed_juz1_v1')) return;
+  const pages = load('juz_pages', {});
+  if (!pages[1] || pages[1].length < PAGES_PER_JUZ) {
+    pages[1] = Array.from({ length: PAGES_PER_JUZ }, (_, i) => i + 1);
+    save('juz_pages', pages);
+  }
+  const status = load('juz_status', { 26:'complete',27:'complete',28:'complete',29:'complete',30:'complete' });
+  status[1] = 'complete';
+  save('juz_status', status);
+  localStorage.setItem('_seed_juz1_v1', '1');
+}
+
+// Summer goal: complete Juz 2-5 by 2nd week of Sept, with per-juz milestones.
+function seedSummerGoal() {
+  if (localStorage.getItem('_seed_summer_goal_v1')) return;
+  const goals = load('goals', DEFAULT_GOALS.slice());
+  goals.forEach(g => { if (/juz\s*1\b/i.test(g.name)) g.done = true; }); // Juz 1 done
+  if (!goals.some(g => /summer|juz\s*2[\s\u2013-]*5/i.test(g.name))) {
+    goals.push(
+      { name:'Complete Juz 2-5 (summer)', date:'2026-09-12', done:false },
+      { name:'Juz 2 memorized', date:'2026-07-10', done:false },
+      { name:'Juz 3 memorized', date:'2026-07-31', done:false },
+      { name:'Juz 4 memorized', date:'2026-08-21', done:false },
+      { name:'Juz 5 memorized', date:'2026-09-11', done:false }
+    );
+  }
+  save('goals', goals);
+  localStorage.setItem('_seed_summer_goal_v1', '1');
+}
+
+function applySeeds() {
+  try { seedJuz1Complete(); seedSummerGoal(); } catch (e) { console.log('applySeeds error', e); }
+}

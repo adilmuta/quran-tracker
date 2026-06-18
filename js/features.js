@@ -5,7 +5,7 @@ function initFeaturesHTML() {
 }
 
 // === JUZ MAP ===
-function getJuzStatus() { return load('juz_status', {26:'complete',27:'complete',28:'complete',29:'complete',30:'complete',1:'in_progress'}); }
+function getJuzStatus() { return load('juz_status', {26:'complete',27:'complete',28:'complete',29:'complete',30:'complete'}); }
 
 function getJuzHealth(juzNum) {
   // Check last 7 days of hifdh logs for this juz's surahs
@@ -35,8 +35,7 @@ function getJuzHealth(juzNum) {
 
 function getJuzForSurah(surahNum) {
   // Simplified juz lookup
-  if (surahNum <= 2) return 1;
-  if (surahNum <= 2) return 2; // Al-Baqarah spans 1-3
+  if (surahNum <= 2) return 1; // (front juz approx; page tracker is the source of truth)
   if (surahNum >= 78) return 30;
   if (surahNum >= 67) return 29;
   if (surahNum >= 58) return 28;
@@ -47,9 +46,14 @@ function getJuzForSurah(surahNum) {
 
 function renderJuzMap() {
   const status = getJuzStatus();
+  const pages = (typeof getJuzPages === 'function') ? getJuzPages() : {};
+  const perJuz = (typeof PAGES_PER_JUZ !== 'undefined') ? PAGES_PER_JUZ : 20;
   let html = '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">';
   for (let j = 1; j <= 30; j++) {
-    const s = status[j] || 'not_started';
+    let s = status[j] || 'not_started';
+    const pc = (pages[j] || []).length;
+    if (pc >= perJuz) s = 'complete';
+    else if (pc > 0 && s !== 'complete') s = 'in_progress';
     const health = s === 'complete' ? getJuzHealth(j) : 'none';
     let bg = 'var(--border)'; let color = 'var(--text)'; let border = 'var(--border)';
     if (s === 'complete' && health === 'green') { bg = 'var(--ok)'; color = 'white'; }
@@ -77,7 +81,7 @@ function toggleJuz(j) {
 }
 
 // === GOALS ===
-function getGoals() { return load('goals', [{name:'Complete Juz 1',date:'2026-06-01',done:false},{name:'Pass Juz 26-28 exam',date:'2026-06-02',done:false}]); }
+function getGoals() { return load('goals', (typeof DEFAULT_GOALS !== 'undefined' ? DEFAULT_GOALS.slice() : [])); }
 
 function renderGoals() {
   const goals = getGoals();

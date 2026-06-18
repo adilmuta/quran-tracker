@@ -152,6 +152,7 @@ function unlockApp() {
   document.getElementById('app').classList.remove('hidden');
   initTabHTML(); initHifdhHTML(); initFeaturesHTML(); initReportsHTML();
   applyRole();
+  if (typeof applySeeds === 'function') applySeeds();
   renderDashboard();
 }
 
