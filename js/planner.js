@@ -51,35 +51,77 @@ function renderQuran() {
     `<div style="display:flex;justify-content:space-between;font-size:0.85rem;"><span>${donePages}/${totalPages} pages</span><span>${totalPct}%</span></div>
      <div class="progress-bar" style="margin:4px 0 16px;"><div class="progress-fill" style="width:${totalPct}%"></div></div>${cards}`;
 
-  // === Today's revision log (juz list derived from completed juz) ===
-  const examLog = load('exam_' + dateKey(today()), {juz:'',pages:'',confidence:'',notes:''});
+  // === Today's revision log (multiple entries per day) ===
   const status = (typeof getJuzStatus === 'function') ? getJuzStatus() : {};
-  let juzList = Object.keys(status).filter(j => status[j] === 'complete').map(Number);
+  let juzList = Object.keys(status).filter(j => status[j] === 'complete' || status[j] === 'in_progress').map(Number);
   if (juzList.length === 0) juzList = ACTIVE_JUZ.slice();
   juzList.sort((a, b) => a - b);
-  const juzOpts = juzList.map(j => `<option value="${j}" ${examLog.juz === String(j) ? 'selected' : ''}>Juz ${j}</option>`).join('');
+  const juzOpts = juzList.map(j => `<option value="${j}">Juz ${j}</option>`).join('');
+  const confMap = {Struggling:'😟', OK:'😐', Good:'😊', Confident:'🤩'};
+  const dayRevs = getRevisions(today());
+  const entriesHtml = dayRevs.length === 0
+    ? '<p style="color:var(--muted);font-size:0.8rem;">No revision logged yet today. Add one below.</p>'
+    : dayRevs.map((r, i) => {
+        const juzLbl = r.juz === 'all' ? 'All' : (r.juz ? 'Juz ' + r.juz : '—');
+        const conf = confMap[r.confidence] || '';
+        return `<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:0.85rem;">
+          <div style="flex:1;">
+            <b>${juzLbl}</b>${r.pages ? ` · ${esc(r.pages)} pp` : ''} ${conf}
+            ${r.notes ? `<div style="color:var(--muted);font-size:0.8rem;">${esc(r.notes)}</div>` : ''}
+            ${r.time ? `<div style="color:var(--muted);font-size:0.7rem;">⏰ ${r.time}</div>` : ''}
+          </div>
+          <button class="btn btn-sm btn-danger" onclick="removeRevision(${i})">✕</button>
+        </div>`;
+      }).join('');
   document.getElementById('exam-log').innerHTML = `
-    <div style="display:flex;gap:6px;margin-bottom:8px;">
-      <select style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem;" onchange="updateExamLog('juz',this.value)">
-        <option value="">Which Juz?</option>${juzOpts}
-        <option value="all" ${examLog.juz === 'all' ? 'selected' : ''}>All</option>
+    <div id="revision-entries">${entriesHtml}</div>
+    <div style="display:flex;gap:6px;margin-top:10px;">
+      <select id="rev-juz" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem;">
+        <option value="">Which Juz?</option>${juzOpts}<option value="all">All</option>
       </select>
-      <input style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem;" placeholder="Pages covered" value="${esc(examLog.pages || '')}" onchange="updateExamLog('pages',this.value)">
+      <input id="rev-pages" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem;" placeholder="Pages covered">
+      <select id="rev-conf" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem;">
+        <option value="">Confidence</option>
+        <option value="Struggling">😟 Struggling</option>
+        <option value="OK">😐 OK</option>
+        <option value="Good">😊 Good</option>
+        <option value="Confident">🤩 Confident</option>
+      </select>
     </div>
-    <div style="display:flex;gap:6px;margin-bottom:8px;">
-      ${['😟 Struggling','😐 OK','😊 Good','🤩 Confident'].map(c => {
-        const val = c.split(' ')[1];
-        return `<button class="btn btn-sm" style="flex:1;border:1px solid var(--border);${examLog.confidence === val ? 'background:var(--accent);color:white;' : 'background:var(--bg);color:var(--text);'}" onclick="updateExamLog('confidence','${val}');renderQuran();">${c}</button>`;
-      }).join('')}
-    </div>
-    <textarea style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem;min-height:40px;" placeholder="Weak spots, mistakes, focus for tomorrow..." onchange="updateExamLog('notes',this.value)">${esc(examLog.notes || '')}</textarea>`;
+    <input id="rev-notes" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem;margin-top:6px;" placeholder="Notes — weak spots, mistakes, focus...">
+    <button class="btn btn-primary btn-sm" style="margin-top:8px;width:100%;" onclick="addRevision()">+ Add revision</button>`;
 }
 
-function updateExamLog(field, value) {
+function getRevisions(d) {
+  const key = 'exam_' + dateKey(d);
+  const v = load(key, []);
+  if (Array.isArray(v)) return v;
+  // Migrate legacy single-object revision into a one-item array
+  if (v && typeof v === 'object' && (v.juz || v.pages || v.confidence || v.notes)) {
+    const arr = [{juz: v.juz || '', pages: v.pages || '', confidence: v.confidence || '', notes: v.notes || '', time: ''}];
+    save(key, arr);
+    return arr;
+  }
+  return [];
+}
+function addRevision() {
+  const juz = document.getElementById('rev-juz').value;
+  const pages = document.getElementById('rev-pages').value.trim();
+  const confidence = document.getElementById('rev-conf').value;
+  const notes = document.getElementById('rev-notes').value.trim();
+  if (!juz && !pages && !confidence && !notes) return;
   const key = 'exam_' + dateKey(today());
-  const log = load(key, {juz:'',pages:'',confidence:'',notes:''});
-  log[field] = value;
-  save(key, log);
+  const arr = getRevisions(today());
+  arr.push({juz, pages, confidence, notes, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})});
+  save(key, arr);
+  renderQuran();
+}
+function removeRevision(i) {
+  const key = 'exam_' + dateKey(today());
+  const arr = getRevisions(today());
+  arr.splice(i, 1);
+  save(key, arr);
+  renderQuran();
 }
 function toggleSurah(juz, n, checked) {
   const progress = load('surah_' + juz, {});
