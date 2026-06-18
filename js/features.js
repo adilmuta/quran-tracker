@@ -2,7 +2,7 @@ function initFeaturesHTML() {
   document.getElementById('juzmap').innerHTML = '<div class="card"><h3>🗺️ Juz Progress Map</h3><p style="font-size:0.8rem;color:var(--muted);margin-bottom:12px;">Tap a juz to cycle: Not Started → In Progress → Complete</p><div id="juz-grid"></div><div style="margin-top:12px;font-size:0.75rem;color:var(--muted);">🟢 Complete & healthy · 🟡 Needs revision · 🔴 Missed recently · ⬜ Not started · 🔵 In progress</div></div>';
   document.getElementById('goals').innerHTML = '<div class="card"><h3>🎯 Active Goals</h3><div id="goals-list"></div></div><div class="card"><h3>➕ New Goal</h3><div class="routine-editor"><input id="goal-name" placeholder="Goal (e.g. Complete Juz 1)"><input id="goal-date" type="date"><button class="btn btn-primary" onclick="addGoal()">Add Goal</button></div></div>';
   document.getElementById('badges').innerHTML = '<div class="card"><h3>🏆 Achievement Badges</h3><div id="badges-grid"></div></div>';
-  document.getElementById('vocab').innerHTML = '<div class="card" style="background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;"><h3 style="color:#fff;">📚 Word of the Day</h3><div id="vocab-wod"></div></div><div class="card"><h3>📊 Vocabulary Progress</h3><div id="vocab-progress"></div></div><div class="card"><h3>📖 Word List</h3><div id="vocab-list"></div></div><div class="card"><h3>➕ Add Word</h3><div class="routine-editor"><input id="vocab-word" placeholder="Word"><input id="vocab-def" placeholder="Meaning (kid-friendly)"><input id="vocab-ex" placeholder="Example sentence (optional)"><button class="btn btn-primary" onclick="addWord()">Add Word</button></div></div>';
+  document.getElementById('vocab').innerHTML = '<div class="card" style="background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;"><h3 style="color:#fff;">📚 Word of the Day</h3><div id="vocab-wod"></div></div><div class="card"><h3>📊 Vocabulary Progress</h3><div id="vocab-progress"></div></div><div class="card"><h3>🧠 Quiz Yourself</h3><div id="vocab-quiz"></div></div><div class="card"><h3>📖 Word List</h3><div id="vocab-list"></div></div><div class="card"><h3>➕ Add Word</h3><div class="routine-editor"><input id="vocab-word" placeholder="Word"><input id="vocab-def" placeholder="Meaning (kid-friendly)"><input id="vocab-ex" placeholder="Example sentence (optional)"><button class="btn btn-primary" onclick="addWord()">Add Word</button></div></div>';
 }
 
 // === JUZ MAP ===
@@ -229,7 +229,32 @@ const DEFAULT_VOCAB = [
   {word:'patient', def:'able to wait calmly', topic:'Character', example:'Be patient while the cake bakes.', learned:false},
   {word:'honest', def:'telling the truth', topic:'Character', example:'An honest friend tells you the truth.', learned:false},
   {word:'grateful', def:'thankful for what you have', topic:'Character', example:'I am grateful for my family.', learned:false},
-  {word:'determined', def:'not giving up on a goal', topic:'Character', example:'She was determined to learn the surah.', learned:false}
+  {word:'determined', def:'not giving up on a goal', topic:'Character', example:'She was determined to learn the surah.', learned:false},
+  // — Science (set 2) —
+  {word:'gravity', def:'the force that pulls things down toward Earth', topic:'Science', example:'Gravity makes the apple fall.', learned:false},
+  {word:'friction', def:'a force that slows things that rub together', topic:'Science', example:'Friction stops the sled on the grass.', learned:false},
+  {word:'mineral', def:'a solid natural material found in the ground', topic:'Science', example:'Salt is a mineral.', learned:false},
+  {word:'adapt', def:'to change in order to fit new conditions', topic:'Science', example:'Animals adapt to cold winters.', learned:false},
+  // — Math (set 2) —
+  {word:'fraction', def:'a part of a whole', topic:'Math', example:'One half is a fraction.', learned:false},
+  {word:'decimal', def:'a number with a point, like 0.5', topic:'Math', example:'We wrote the money as a decimal.', learned:false},
+  {word:'angle', def:'the space between two lines that meet', topic:'Math', example:'A square has four right angles.', learned:false},
+  {word:'volume', def:'how much space something takes up', topic:'Math', example:'The volume of the box is large.', learned:false},
+  // — Social Studies (set 2) —
+  {word:'economy', def:'the way a place makes and uses money and goods', topic:'Social Studies', example:'Farming is part of our economy.', learned:false},
+  {word:'resource', def:'something useful that people use', topic:'Social Studies', example:'Water is an important resource.', learned:false},
+  {word:'tradition', def:'a custom passed down over time', topic:'Social Studies', example:'Eid is a family tradition.', learned:false},
+  {word:'migrate', def:'to move from one place to another', topic:'Social Studies', example:'Birds migrate south in winter.', learned:false},
+  // — Reading & Language (set 2) —
+  {word:'character', def:'a person or animal in a story', topic:'Reading', example:'The main character is brave.', learned:false},
+  {word:'setting', def:'where and when a story happens', topic:'Reading', example:'The setting is a forest at night.', learned:false},
+  {word:'fiction', def:'stories that are made up, not real', topic:'Reading', example:'We read a fiction book about dragons.', learned:false},
+  {word:'paragraph', def:'a group of sentences about one idea', topic:'Reading', example:'Start a new paragraph for each idea.', learned:false},
+  // — Character (set 2) —
+  {word:'courageous', def:'brave when facing something hard', topic:'Character', example:'She was courageous at the dentist.', learned:false},
+  {word:'respectful', def:'treating others kindly and politely', topic:'Character', example:'Be respectful to your teacher.', learned:false},
+  {word:'cooperative', def:'willing to work together with others', topic:'Character', example:'He was cooperative during group work.', learned:false},
+  {word:'perseverance', def:'not giving up when things are hard', topic:'Character', example:'Hifdh takes perseverance.', learned:false}
 ];
 
 function getVocab() { return load('vocab', DEFAULT_VOCAB.slice()); }
@@ -284,6 +309,7 @@ function renderVocab() {
         <div style="font-size:0.82rem;color:var(--muted);margin-top:2px;">${esc(w.def)}</div>
         ${w.example ? `<div style="font-size:0.78rem;color:var(--muted);font-style:italic;margin-top:2px;">“${esc(w.example)}”</div>` : ''}
       </div>`).join('');
+  if (document.getElementById('vocab-quiz')) renderQuiz();
 }
 
 function toggleWord(i) {
@@ -327,7 +353,7 @@ function removeWord(i) {
 
 // Merge any new starter words into an existing saved vocab list (idempotent).
 function seedVocab() {
-  if (localStorage.getItem('_seed_vocab_v2')) return;
+  if (localStorage.getItem('_seed_vocab_v3')) return;
   const existing = load('vocab', null);
   if (existing && Array.isArray(existing)) {
     const have = new Set(existing.map(w => (w.word || '').toLowerCase()));
@@ -335,5 +361,77 @@ function seedVocab() {
     DEFAULT_VOCAB.forEach(w => { if (!have.has(w.word.toLowerCase())) { existing.push({ ...w }); added++; } });
     if (added) save('vocab', existing);
   }
-  localStorage.setItem('_seed_vocab_v2', '1');
+  localStorage.setItem('_seed_vocab_v3', '1');
+}
+
+// === VOCAB QUIZ (multiple choice: word -> meaning) ===
+let quizState = null;
+
+function startQuiz() { quizState = {correct: 0, total: 0}; loadQuizQuestion(); renderQuiz(); }
+function stopQuiz() { quizState = null; renderQuiz(); }
+function nextQuiz() { if (!quizState) return; loadQuizQuestion(); renderQuiz(); }
+
+function loadQuizQuestion() {
+  const vocab = getVocab().filter(w => w.word && w.def);
+  if (vocab.length < 4) { quizState.notEnough = true; return; }
+  const target = vocab[Math.floor(Math.random() * vocab.length)];
+  const used = new Set([target.def]);
+  const distractors = [];
+  let guard = 0;
+  while (distractors.length < 3 && guard++ < 300) {
+    const w = vocab[Math.floor(Math.random() * vocab.length)];
+    if (!used.has(w.def)) { used.add(w.def); distractors.push(w.def); }
+  }
+  const options = [{text: target.def, correct: true}, ...distractors.map(d => ({text: d, correct: false}))];
+  for (let i = options.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [options[i], options[j]] = [options[j], options[i]]; }
+  quizState.word = target.word;
+  quizState.options = options;
+  quizState.picked = null;
+  quizState.notEnough = false;
+}
+
+function answerQuiz(i) {
+  if (!quizState || quizState.picked !== null) return;
+  quizState.picked = i;
+  quizState.total++;
+  if (quizState.options[i].correct) quizState.correct++;
+  renderQuiz();
+}
+
+function renderQuiz() {
+  const el = document.getElementById('vocab-quiz');
+  if (!el) return;
+  if (!quizState) {
+    el.innerHTML = `<p style="font-size:0.85rem;color:var(--muted);margin-bottom:8px;">Test yourself — pick the correct meaning of each word.</p><button class="btn btn-primary" onclick="startQuiz()">Start Quiz</button>`;
+    return;
+  }
+  if (quizState.notEnough) {
+    el.innerHTML = `<p style="font-size:0.85rem;color:var(--muted);">Add at least 4 words to start a quiz.</p><button class="btn btn-sm" style="border:1px solid var(--border);background:var(--bg);color:var(--text);margin-top:6px;" onclick="stopQuiz()">Close</button>`;
+    return;
+  }
+  const answered = quizState.picked !== null;
+  const optsHtml = quizState.options.map((o, i) => {
+    let style = 'background:var(--bg);color:var(--text);border:1px solid var(--border);';
+    if (answered) {
+      if (o.correct) style = 'background:var(--ok);color:#fff;border:1px solid var(--ok);';
+      else if (i === quizState.picked) style = 'background:var(--danger);color:#fff;border:1px solid var(--danger);';
+      else style = 'background:var(--bg);color:var(--muted);border:1px solid var(--border);';
+    }
+    return `<button class="btn btn-sm" style="display:block;width:100%;text-align:left;margin-bottom:6px;${style}" ${answered ? 'disabled' : ''} onclick="answerQuiz(${i})">${esc(o.text)}</button>`;
+  }).join('');
+  const feedback = answered
+    ? (quizState.options[quizState.picked].correct
+        ? '<div style="color:var(--ok);font-weight:600;font-size:0.85rem;">✅ Correct! MashaAllah</div>'
+        : '<div style="color:var(--danger);font-weight:600;font-size:0.85rem;">❌ Not quite — the green one is right.</div>')
+    : '';
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--muted);margin-bottom:8px;">
+      <span>Score: ${quizState.correct}/${quizState.total}</span>
+      <span style="cursor:pointer;" onclick="stopQuiz()">✕ End</span>
+    </div>
+    <div style="font-size:1.2rem;font-weight:700;color:var(--accent);margin-bottom:2px;">${esc(quizState.word)}</div>
+    <div style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;">What does it mean?</div>
+    ${optsHtml}
+    ${feedback}
+    ${answered ? `<button class="btn btn-primary btn-sm" style="margin-top:8px;width:100%;" onclick="nextQuiz()">Next →</button>` : ''}`;
 }
